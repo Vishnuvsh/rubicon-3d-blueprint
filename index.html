@@ -1555,8 +1555,9 @@
     // 7. LIVING 3D OFF-ROAD WORLD: CURVED WINDING TRAIL, ROCKS, TREES, MOUNTAINS & DUST
     // ============================================================================
     function getRoadCurveRaw(z, t) {
-      const s = z * 0.026 + t * 0.20;
-      return Math.sin(s) * 3.6 + Math.sin(s * 1.5 + 0.8) * 1.2;
+      // Natural gentle winding mountain road ("ചെറിയ വളവുകൾ")
+      const s = z * 0.028 + t * 0.20;
+      return Math.sin(s) * 3.2 + Math.sin(s * 1.55 + 0.85) * 1.1;
     }
 
     function getCurvedRoadX(z, t) {
@@ -1656,29 +1657,33 @@
     }
 
     const roadsideProps = [];
-    const foliageConeGeo = new THREE.ConeGeometry(0.95, 2.4, 7);
-    const trunkCylGeo = new THREE.CylinderGeometry(0.14, 0.2, 1.2, 8);
-    const sideBoulderGeo = new THREE.DodecahedronGeometry(0.75, 1);
+    // Compact, low-profile trees & boulders so they never obstruct vehicle camera view
+    const foliageConeGeo = new THREE.ConeGeometry(0.65, 1.35, 7);
+    const trunkCylGeo = new THREE.CylinderGeometry(0.09, 0.13, 0.65, 8);
+    const sideBoulderGeo = new THREE.DodecahedronGeometry(0.52, 1);
 
     const numProps = 44;
     const propsSpanZ = 100.0;
     for (let p = 0; p < numProps; p++) {
       const side = p % 2 === 0 ? -1 : 1;
-      const xOffset = side * (3.6 + ((p * 3) % 5) * 1.4);
+      // Push trees further out (4.8m to 10.5m) so the road and vehicle have wide, open side clearance
+      const xOffset = side * (4.8 + ((p * 3) % 5) * 1.45);
       const zPos = -35.0 + (p / numProps) * propsSpanZ;
 
       const propGroup = new THREE.Group();
       propGroup.position.set(xOffset, 0, zPos);
 
-      const trunk = makeMesh(trunkCylGeo, materials.treeTrunk, 0, 0.6, 0);
-      const crown1 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 1.8, 0);
-      const crown2 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 2.7, 0);
-      crown2.scale.setScalar(0.72);
-      const baseRock = makeMesh(sideBoulderGeo, materials.rockStone, side * -0.5, 0.25, 0.4, p, p * 0.5, 0);
-      baseRock.scale.set(0.8, 0.5, 0.7);
+      const trunk = makeMesh(trunkCylGeo, materials.treeTrunk, 0, 0.32, 0);
+      const crown1 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 1.05, 0);
+      const crown2 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 1.70, 0);
+      crown2.scale.setScalar(0.70);
+      const baseRock = makeMesh(sideBoulderGeo, materials.rockStone, side * -0.4, 0.18, 0.3, p, p * 0.5, 0);
+      baseRock.scale.set(0.75, 0.45, 0.65);
 
       propGroup.add(trunk, crown1, crown2, baseRock);
-      propGroup.scale.setScalar(0.85 + (p % 4) * 0.25);
+      // Compact scale so trees sit lower than vehicle roofline
+      const baseScale = 0.52 + (p % 4) * 0.12;
+      propGroup.scale.setScalar(baseScale);
 
       worldEnvGroup.add(propGroup);
       roadsideProps.push({ group: propGroup, trunk, crown1, crown2, baseOffset: xOffset, z: zPos });
@@ -2364,17 +2369,23 @@
       // Update 3D curved road mesh ribbon geometry:
       updateCurvedTrail(state.anim.terrainTime);
 
-      // Dynamic Winding Road Curves: Calculate smooth lookahead steering for front wheels
-      const xAhead = getCurvedRoadX(6.5, state.anim.terrainTime);
-      const steerAngle = Math.atan2(xAhead, 6.5);
-      const autoSteerDeg = state.driveOnRocks ? Math.max(-16, Math.min(16, (steerAngle * 180 / Math.PI) * 1.05)) : 0;
+      // 1. Natural Gentle Curves: Calculate lookahead steering for front wheels ("ചെറിയ വളവുകൾ")
+      const xAhead = getCurvedRoadX(5.5, state.anim.terrainTime);
+      const steerAngleRad = Math.atan2(xAhead, 5.5);
 
-      // Keep vehicle body stable, calm and centered (no over-moving or aggressive left-right yawing)
-      cruiserRoot.rotation.y = 0;
-
-      // Total steering angle for front wheels:
-      const totalSteerDeg = Math.max(-32, Math.min(32, state.steerAngleDeg + autoSteerDeg));
+      // Realistic, natural front tire steering angle (±4° to ±10° natural road steering)
+      const autoSteerDeg = state.driveOnRocks ? Math.max(-10, Math.min(10, (steerAngleRad * 180 / Math.PI) * 1.15)) : 0;
+      const totalSteerDeg = Math.max(-28, Math.min(28, state.steerAngleDeg + autoSteerDeg));
       const baseSteerRad = (totalSteerDeg * Math.PI) / 180;
+
+      // 2. Realistic Vehicle Yaw & Road Following (റിയലായിട്ട് വളവുകൾ തിരിയുന്നത്):
+      // The vehicle body smoothly points along the road heading like a real vehicle negotiating a bend!
+      const roadHeading = Math.atan2(getCurvedRoadX(1.8, state.anim.terrainTime) - getCurvedRoadX(-1.8, state.anim.terrainTime), 3.6);
+      if (state.driveOnRocks) {
+        cruiserRoot.rotation.y += (roadHeading * 0.42 - cruiserRoot.rotation.y) * Math.min(1, dt * 3.5);
+      } else {
+        cruiserRoot.rotation.y += (-cruiserRoot.rotation.y) * Math.min(1, dt * 4.0);
+      }
 
       // Update Live HUD Steering Telemetry Readout
       const steerReadoutEl = document.getElementById('steerAngleVal');
@@ -2383,10 +2394,16 @@
         steerReadoutEl.textContent = `${rounded > 0 ? '+' : ''}${rounded}° ${rounded > 2 ? '► RIGHT' : (rounded < -2 ? '◄ LEFT' : '• CTR')}`;
       }
 
-      // 2. Per-Wheel Rock-Crawling Spring-Damper Physics
+      // 3. Per-Wheel Rock-Crawling Physics with Exact World-Position Sampling
+      const cosCar = Math.cos(cruiserRoot.rotation.y);
+      const sinCar = Math.sin(cruiserRoot.rotation.y);
+
       for (let i = 0; i < wheelNodes.length; i++) {
         const w = wheelNodes[i];
-        const targetLift = sampleRockHeightAt(w.x, w.z);
+        // Exact world position of the wheel taking vehicle yaw into account:
+        const worldWheelX = w.x * cosCar + w.z * sinCar;
+        const worldWheelZ = -w.x * sinCar + w.z * cosCar;
+        const targetLift = sampleRockHeightAt(worldWheelX, worldWheelZ);
         const springRate = targetLift > w.currentLift ? 58 : 30;
         const accel = (targetLift - w.currentLift) * springRate - w.velLift * 9.2;
         w.velLift += accel * dt;
@@ -2396,11 +2413,11 @@
         w.wheelPivot.position.set(outX, 0.50 + w.currentLift, w.z);
 
         if (w.isFront) {
-          // Smooth Ackermann tire steering
+          // Authentic Ackermann steering geometry: inside wheel turns slightly sharper into curve
           const isRightWheel = w.x > 0;
           const ackermannFactor = (totalSteerDeg > 0 && isRightWheel) || (totalSteerDeg < 0 && !isRightWheel)
-            ? 1.05
-            : 0.95;
+            ? 1.08
+            : 0.92;
           w.wheelPivot.rotation.y = baseSteerRad * ackermannFactor;
         }
         if (state.driveOnRocks) {
@@ -2422,11 +2439,15 @@
       rearAxleGroup.position.y = 0.50 + (rl + rr) * 0.5;
       rearAxleGroup.rotation.z = Math.atan2(rr - rl, 2.08);
 
-      // 3. Second-Order Spring-Damper Physics for Chassis Body + Instant Lift Kit Offset
+      // 4. Second-Order Spring-Damper Physics for Chassis Body + Instant Lift Kit Offset
       const avgLift = (fl + fr + rl + rr) * 0.25;
       const goalY = state.liftKitOffset + avgLift * 0.66 + state.jumpOffset;
       const goalPitch = -Math.atan2(((fl + fr) * 0.5) - ((rl + rr) * 0.5), 2.98) * 0.88;
-      const goalRoll = Math.atan2(((fr + rr) * 0.5) - ((fl + rl) * 0.5), 2.08) * 0.85;
+
+      // Authentic rock-crawling body articulation from original + subtle centrifugal lean in turns:
+      const axleTilt = Math.atan2(((fr + rr) * 0.5) - ((fl + rl) * 0.5), 2.08);
+      const turnRoll = -(totalSteerDeg * Math.PI / 180) * 0.05;
+      const goalRoll = axleTilt * 0.82 + turnRoll;
 
       const cp = state.chassisPhys;
       cp.vy += ((goalY - cp.y) * 42 - cp.vy * 6.0) * dt;
@@ -2435,7 +2456,7 @@
       cp.vPitch += ((goalPitch - cp.pitch) * 44 - cp.vPitch * 5.6) * dt;
       cp.pitch += cp.vPitch * dt;
 
-      cp.vRoll += ((goalRoll - cp.roll) * 42 - cp.vRoll * 5.4) * dt;
+      cp.vRoll += ((goalRoll - cp.roll) * 42 - cp.vRoll * 5.6) * dt;
       cp.roll += cp.vRoll * dt;
 
       sprungMassGroup.position.y = cp.y;
