@@ -183,6 +183,42 @@
       background: rgba(56, 189, 248, 0.35);
       border-radius: 999px;
     }
+
+    #canvasContainer {
+      touch-action: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile Sheet & Panel Transitions */
+    @media (max-width: 768px) {
+      .mobile-sheet {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 54px !important;
+        top: auto !important;
+        width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: 62vh !important;
+        border-radius: 20px !important;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.88) !important;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+        z-index: 45 !important;
+      }
+      .mobile-sheet.collapsed {
+        transform: translateY(125%) scale(0.96) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    }
   </style>
 </head>
 <body class="relative w-screen h-screen overflow-hidden select-none">
@@ -247,58 +283,62 @@
   <!-- ======================================================================= -->
   <!-- TOP MISSION-CONTROL TELEMETRY & MULTI-LOCATION SELECTOR HEADER          -->
   <!-- ======================================================================= -->
-  <header class="fixed top-2.5 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none">
+  <header class="fixed top-2 left-2 right-2 sm:top-2.5 sm:left-3 sm:right-3 z-30 flex flex-col gap-1.5 sm:gap-2 pointer-events-none">
     
-    <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
       <!-- Brand & Performance Badge -->
-      <div class="hud-pod rounded-2xl px-3.5 py-2 flex items-center gap-3 pointer-events-auto">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-[#00f0ff]/25 to-[#10b981]/25 border border-[#00f0ff]/50 flex items-center justify-center">
-          <svg class="w-4 h-4 text-[#00f0ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="hud-pod rounded-2xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-[#00f0ff]/25 to-[#10b981]/25 border border-[#00f0ff]/50 flex items-center justify-center">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#00f0ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
             <line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/>
           </svg>
         </div>
         <div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5 sm:gap-2">
             <span class="font-display text-xs sm:text-sm font-extrabold tracking-wider text-white">RUBICON <span class="text-[#00f0ff]">392 4X4²</span></span>
-            <span id="fpsBadge" class="font-mono-tech text-[8px] px-2 py-0.5 rounded-full bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40">60 FPS • PMREM PBR</span>
+            <span id="fpsBadge" class="font-mono-tech text-[7.5px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-full bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40">60 FPS</span>
           </div>
-          <div id="statusReadout" class="font-mono-tech text-[8.5px] text-slate-300 mt-0.5">
+          <div id="statusReadout" class="font-mono-tech text-[7.5px] sm:text-[8.5px] text-slate-300 mt-0.5 max-w-[190px] sm:max-w-none truncate sm:whitespace-normal">
             LOCATION: MUNNAR WESTERN GHATS FOREST TRAIL • ACTIVE ROCK CRAWL
           </div>
         </div>
       </div>
 
-      <!-- Camera Director & Audio -->
-      <div class="hud-pod rounded-2xl px-3 py-1.5 flex flex-wrap items-center gap-1.5 pointer-events-auto">
-        <span class="font-mono-tech text-[8.5px] text-slate-400 uppercase px-1">CAMERA:</span>
-        <button data-cam="iso" class="cam-btn cam-pill active">DRONE</button>
-        <button data-cam="wheel" class="cam-btn cam-pill">SHOCK CAM</button>
-        <button data-cam="side" class="cam-btn cam-pill">PROFILE</button>
-        <button data-cam="front" class="cam-btn cam-pill">FRONT</button>
-        <button data-cam="rear" class="cam-btn cam-pill">REAR</button>
-        <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
-        <div class="text-right pr-1">
-          <span class="font-display text-xs font-bold text-[#00f0ff]" id="speedReadout">46</span>
-          <span class="font-mono-tech text-[8px] text-slate-400">KM/H</span>
+      <!-- Camera Director, Audio & Mobile Tuning Toggle -->
+      <div class="hud-pod rounded-2xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1 sm:gap-1.5 pointer-events-auto overflow-x-auto no-scrollbar">
+        <button id="btnMobileTuningToggle" class="cam-pill md:hidden !px-2.5 !py-1 text-[#00f0ff] border-[#00f0ff]/50 bg-[#00f0ff]/20 font-bold flex items-center gap-1 shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#00f0ff] animate-pulse"></span>
+          🎨 TUNING
+        </button>
+        <span class="font-mono-tech text-[8px] sm:text-[8.5px] text-slate-400 uppercase px-0.5 hidden sm:inline">CAMERA:</span>
+        <button data-cam="iso" class="cam-btn cam-pill active shrink-0">DRONE</button>
+        <button data-cam="wheel" class="cam-btn cam-pill shrink-0">SHOCK</button>
+        <button data-cam="side" class="cam-btn cam-pill shrink-0">SIDE</button>
+        <button data-cam="front" class="cam-btn cam-pill shrink-0">FRONT</button>
+        <button data-cam="rear" class="cam-btn cam-pill shrink-0">REAR</button>
+        <div class="h-3.5 w-[1px] bg-slate-700 mx-0.5"></div>
+        <div class="text-right pr-0.5 shrink-0">
+          <span class="font-display text-[11px] sm:text-xs font-bold text-[#00f0ff]" id="speedReadout">46</span>
+          <span class="font-mono-tech text-[7.5px] sm:text-[8px] text-slate-400">KM/H</span>
         </div>
-        <button id="btnAudioToggle" class="dock-btn !py-1 !px-2.5">
-          <span>🔊 SFX: OFF</span>
+        <button id="btnAudioToggle" class="dock-btn !py-0.5 sm:!py-1 !px-2 sm:!px-2.5 shrink-0 text-[8.5px]">
+          <span>🔊</span>
         </button>
       </div>
     </div>
 
     <!-- 8 REALISTIC OFF-ROAD LOCATIONS (BIOME SELECTOR BAR) -->
-    <div class="hud-pod rounded-full px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto custom-scroll pointer-events-auto self-start max-w-full">
-      <span class="font-mono-tech text-[9px] font-bold text-[#00f0ff] uppercase px-2 shrink-0">🌍 SELECT LOCATION:</span>
-      <button data-biome="munnar" class="biome-btn cam-pill active">🌲 MUNNAR FOREST (KERALA)</button>
-      <button data-biome="moab" class="biome-btn cam-pill">🏜️ MOAB RED ROCK DESERT</button>
-      <button data-biome="ladakh" class="biome-btn cam-pill">🏔️ LADAKH SNOW PASS</button>
-      <button data-biome="beach" class="biome-btn cam-pill">🌊 COASTAL BEACH DUNES</button>
-      <button data-biome="volcano" class="biome-btn cam-pill">🌋 VOLCANIC LAVA TRAIL</button>
-      <button data-biome="mars" class="biome-btn cam-pill">🌋 MARS CANYON</button>
-      <button data-biome="arctic" class="biome-btn cam-pill">❄️ GLACIER NIGHT</button>
-      <button data-biome="cyber" class="biome-btn cam-pill">⚡ CYBER LAB</button>
+    <div class="hud-pod rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto self-start max-w-full">
+      <span class="font-mono-tech text-[8px] sm:text-[9px] font-bold text-[#00f0ff] uppercase px-1.5 shrink-0">🌍 BIOMES:</span>
+      <button data-biome="munnar" class="biome-btn cam-pill active shrink-0">🌲 MUNNAR</button>
+      <button data-biome="moab" class="biome-btn cam-pill shrink-0">🏜️ MOAB</button>
+      <button data-biome="ladakh" class="biome-btn cam-pill shrink-0">🏔️ LADAKH</button>
+      <button data-biome="beach" class="biome-btn cam-pill shrink-0">🌊 BEACH</button>
+      <button data-biome="volcano" class="biome-btn cam-pill shrink-0">🌋 VOLCANO</button>
+      <button data-biome="mars" class="biome-btn cam-pill shrink-0">🔴 MARS</button>
+      <button data-biome="arctic" class="biome-btn cam-pill shrink-0">❄️ ARCTIC</button>
+      <button data-biome="cyber" class="biome-btn cam-pill shrink-0">⚡ CYBER</button>
     </div>
 
   </header>
@@ -306,7 +346,15 @@
   <!-- ======================================================================= -->
   <!-- FLOATING RIGHT TELEMETRY, SUSPENSION TUNING & INSTANT CONFIGURATOR POD  -->
   <!-- ======================================================================= -->
-  <aside class="fixed top-28 right-3 z-30 w-[276px] flex flex-col gap-2.5 pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto custom-scroll pr-0.5">
+  <aside id="sideControlPanel" class="fixed top-28 right-3 z-30 w-[276px] flex flex-col gap-2.5 pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto custom-scroll pr-0.5 mobile-sheet collapsed md:translate-y-0 md:opacity-100 md:pointer-events-auto">
+    
+    <!-- Mobile Sheet Handle Bar & Close Button -->
+    <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-slate-800 md:hidden">
+      <span class="font-mono-tech text-[9.5px] font-bold text-[#00f0ff] flex items-center gap-1.5">
+        <span>🛠️</span> 4X4 TUNING &amp; PAINTS
+      </span>
+      <button id="btnCloseMobileSheet" class="text-slate-300 hover:text-white px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-[9px] font-mono-tech">✕ CLOSE</button>
+    </div>
     
     <!-- Live 60-FPS 4-Channel Suspension Oscilloscope & Tuning Card -->
     <div class="hud-pod rounded-2xl p-2.5">
@@ -443,47 +491,47 @@
   <!-- ======================================================================= -->
   <!-- BOTTOM CURVED SIM-COCKPIT COMMAND DOCK                                  -->
   <!-- ======================================================================= -->
-  <nav class="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 max-w-[96vw] pointer-events-auto">
-    <div class="hud-pod rounded-full px-3.5 py-2 flex flex-wrap items-center justify-center gap-1.5">
+  <nav class="fixed bottom-2 left-1/2 -translate-x-1/2 z-30 max-w-[98vw] pointer-events-auto w-full px-1.5 sm:px-2 flex justify-center">
+    <div class="hud-pod rounded-full px-2.5 sm:px-3.5 py-1.5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar max-w-full">
       
-      <button id="btnDriveRocks" class="dock-btn active">
+      <button id="btnDriveRocks" class="dock-btn active shrink-0">
         <span class="w-2 h-2 rounded-full bg-[#10b981] animate-ping"></span>
         <span id="driveBtnLabel">TERRAIN CRAWL: ON</span>
       </button>
 
-      <button id="btnHydraulicJump" class="dock-btn jump-btn" title="Launch 4x4 upward to test full suspension slam & rebound">
-        <span>🚀 HYDRAULIC DROP TEST</span>
+      <button id="btnHydraulicJump" class="dock-btn jump-btn shrink-0" title="Launch 4x4 upward to test full suspension slam & rebound">
+        <span>🚀 DROP TEST</span>
       </button>
 
-      <button id="btnWindTunnel" class="dock-btn" title="Toggle 3D real-time aerodynamic flow streamlines">
+      <button id="btnWindTunnel" class="dock-btn shrink-0" title="Toggle 3D real-time aerodynamic flow streamlines">
         <span>🌪️ CFD WIND TUNNEL</span>
       </button>
 
-      <button id="btnXrayScanner" class="dock-btn" title="Make body shell translucent to inspect internal V8 & drivetrain">
-        <span>🔬 X-RAY SCANNER</span>
+      <button id="btnXrayScanner" class="dock-btn shrink-0" title="Make body shell translucent to inspect internal V8 & drivetrain">
+        <span>🔬 X-RAY</span>
       </button>
 
-      <button id="btnOpenDoors" class="dock-btn">
-        <span>🚪 DOORS &amp; TAILGATE</span>
+      <button id="btnOpenDoors" class="dock-btn shrink-0">
+        <span>🚪 DOORS</span>
       </button>
 
-      <button id="btnOpenHood" class="dock-btn">
-        <span>⚙️ V8 HOOD</span>
+      <button id="btnOpenHood" class="dock-btn shrink-0">
+        <span>⚙️ HOOD</span>
       </button>
 
-      <button id="btnExploded" class="dock-btn">
-        <span>💥 EXPLODE MATRIX</span>
+      <button id="btnExploded" class="dock-btn shrink-0">
+        <span>💥 EXPLODE</span>
       </button>
 
-      <button id="btnWireframe" class="dock-btn">
+      <button id="btnWireframe" class="dock-btn shrink-0">
         <span>🕸️ WIREFRAME</span>
       </button>
 
-      <button id="btnLights" class="dock-btn active">
+      <button id="btnLights" class="dock-btn active shrink-0">
         <span>💡 LUMEN ARRAY</span>
       </button>
 
-      <button id="btnRotateModel" class="dock-btn">
+      <button id="btnRotateModel" class="dock-btn shrink-0">
         <span>🔄 AUTO-ORBIT</span>
       </button>
 
@@ -885,29 +933,60 @@
       prevY: 0
     };
 
+    // Responsive Multi-Touch & Pointer Controls (1-finger orbit, 2-finger pinch-to-zoom)
+    const activePointers = new Map();
+    let initialPinchDistance = null;
+    let initialPinchRadius = null;
+
     container.addEventListener('pointerdown', (e) => {
-      camRig.isDragging = true;
-      camRig.prevX = e.clientX;
-      camRig.prevY = e.clientY;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePointers.size === 1) {
+        camRig.isDragging = true;
+        camRig.prevX = e.clientX;
+        camRig.prevY = e.clientY;
+      } else if (activePointers.size === 2) {
+        camRig.isDragging = false;
+        const pts = Array.from(activePointers.values());
+        initialPinchDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        initialPinchRadius = camRig.goalRadius;
+      }
     });
 
     window.addEventListener('pointermove', (e) => {
-      if (!camRig.isDragging) return;
-      const dx = e.clientX - camRig.prevX;
-      const dy = e.clientY - camRig.prevY;
-      camRig.prevX = e.clientX;
-      camRig.prevY = e.clientY;
-      camRig.goalTheta -= dx * 0.0075;
-      camRig.goalPhi = Math.max(0.24, Math.min(1.50, camRig.goalPhi - dy * 0.0065));
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (activePointers.size === 1 && camRig.isDragging) {
+        const dx = e.clientX - camRig.prevX;
+        const dy = e.clientY - camRig.prevY;
+        camRig.prevX = e.clientX;
+        camRig.prevY = e.clientY;
+        camRig.goalTheta -= dx * 0.0075;
+        camRig.goalPhi = Math.max(0.24, Math.min(1.50, camRig.goalPhi - dy * 0.0065));
+      } else if (activePointers.size === 2 && initialPinchDistance) {
+        const pts = Array.from(activePointers.values());
+        const currentDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const scale = initialPinchDistance / Math.max(10, currentDist);
+        camRig.goalRadius = Math.max(4.8, Math.min(22, initialPinchRadius * scale));
+      }
     });
 
-    window.addEventListener('pointerup', () => {
-      camRig.isDragging = false;
-    });
+    function handlePointerEnd(e) {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size === 1) {
+        const remaining = Array.from(activePointers.values())[0];
+        camRig.isDragging = true;
+        camRig.prevX = remaining.x;
+        camRig.prevY = remaining.y;
+        initialPinchDistance = null;
+      } else if (activePointers.size === 0) {
+        camRig.isDragging = false;
+        initialPinchDistance = null;
+      }
+    }
 
-    window.addEventListener('pointercancel', () => {
-      camRig.isDragging = false;
-    });
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
 
     container.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -2237,6 +2316,37 @@
       }
     });
 
+    // Mobile Drawer Sheet Toggle (Tuning & Color Configurator)
+    const sideControlPanel = document.getElementById('sideControlPanel');
+    const btnMobileTuningToggle = document.getElementById('btnMobileTuningToggle');
+    const btnCloseMobileSheet = document.getElementById('btnCloseMobileSheet');
+
+    function toggleMobileTuningSheet(forceClose = false) {
+      if (!sideControlPanel) return;
+      playMechanicalClick(210);
+      if (forceClose) {
+        sideControlPanel.classList.add('collapsed');
+        if (btnMobileTuningToggle) btnMobileTuningToggle.classList.remove('active');
+      } else {
+        const isNowCollapsed = sideControlPanel.classList.toggle('collapsed');
+        if (btnMobileTuningToggle) btnMobileTuningToggle.classList.toggle('active', !isNowCollapsed);
+      }
+    }
+
+    if (btnMobileTuningToggle) {
+      btnMobileTuningToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMobileTuningSheet();
+      });
+    }
+
+    if (btnCloseMobileSheet) {
+      btnCloseMobileSheet.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMobileTuningSheet(true);
+      });
+    }
+
     // ============================================================================
     // 12. 60-FPS PERFORMANCE-OPTIMIZED RENDER & PHYSICS LOOP
     // ============================================================================
@@ -2531,13 +2641,24 @@
       updateCalloutsOverlay();
     }
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+    function handleScreenResize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      // In mobile portrait orientation (tall phone screen), adjust FOV so 4x4 rig fits gorgeously:
+      if (w < h) {
+        camera.fov = Math.min(50, Math.max(38, 35 * (h / w) * 0.58));
+      } else {
+        camera.fov = 35;
+      }
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+      renderer.setSize(w, h);
+    }
+
+    window.addEventListener('resize', handleScreenResize);
 
     window.onload = () => {
+      handleScreenResize();
       buildColorPaletteUI();
       renderMaterialThumbnails();
       applyBiomeEnvironment('munnar');
