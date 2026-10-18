@@ -219,6 +219,23 @@
         pointer-events: none !important;
       }
     }
+
+    #ackermannHudCard {
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+    @media (max-width: 768px) {
+      #ackermannHudCard {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        top: 62px !important;
+        width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: 58vh !important;
+        z-index: 46 !important;
+      }
+    }
   </style>
 </head>
 <body class="relative w-screen h-screen overflow-hidden select-none">
@@ -313,10 +330,16 @@
         </button>
         <span class="font-mono-tech text-[8px] sm:text-[8.5px] text-slate-400 uppercase px-0.5 hidden sm:inline">CAMERA:</span>
         <button data-cam="iso" class="cam-btn cam-pill active shrink-0">DRONE</button>
+        <button data-cam="topdown" class="cam-btn cam-pill shrink-0 text-[#00f0ff] border-[#00f0ff]/50 font-bold" title="Top-Down Overhead Blueprint Steering View">📐 TOP-DOWN</button>
         <button data-cam="wheel" class="cam-btn cam-pill shrink-0">SHOCK</button>
         <button data-cam="side" class="cam-btn cam-pill shrink-0">SIDE</button>
         <button data-cam="front" class="cam-btn cam-pill shrink-0">FRONT</button>
         <button data-cam="rear" class="cam-btn cam-pill shrink-0">REAR</button>
+        <div class="h-3.5 w-[1px] bg-slate-700 mx-0.5"></div>
+        <button id="btnAckermannToggle" class="cam-pill active !px-2 !py-0.5 sm:!py-1 text-[#10b981] border-[#10b981]/50 bg-[#10b981]/20 font-bold flex items-center gap-1 shrink-0" title="Toggle Ackermann Geometry Telemetry HUD">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+          <span>📐 ACKERMANN HUD</span>
+        </button>
         <div class="h-3.5 w-[1px] bg-slate-700 mx-0.5"></div>
         <div class="text-right pr-0.5 shrink-0">
           <span class="font-display text-[11px] sm:text-xs font-bold text-[#00f0ff]" id="speedReadout">46</span>
@@ -342,6 +365,163 @@
     </div>
 
   </header>
+
+  <!-- ======================================================================= -->
+  <!-- 3D HOLOGRAPHIC ACKERMANN WHEEL ANGLE BADGES OVERLAY                      -->
+  <!-- ======================================================================= -->
+  <div id="ackermannPinsOverlay" class="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+    <div id="ackPinFL" class="absolute pointer-events-none transition-opacity duration-150" style="opacity: 0; transform: translate(-50%, -100%);">
+      <div class="hud-pod rounded-lg px-2 py-0.5 border-l-2 border-l-[#00f0ff] font-mono-tech text-[8px] whitespace-nowrap shadow-xl">
+        <div class="flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#00f0ff] animate-pulse"></span>
+          <span class="text-[#00f0ff] font-bold">FL: <span id="pinDegFL">0.0°</span></span>
+        </div>
+        <div id="pinRoleFL" class="text-[6.5px] text-slate-300 uppercase tracking-tight">OUTER WHEEL</div>
+      </div>
+    </div>
+
+    <div id="ackPinFR" class="absolute pointer-events-none transition-opacity duration-150" style="opacity: 0; transform: translate(-50%, -100%);">
+      <div class="hud-pod rounded-lg px-2 py-0.5 border-l-2 border-l-[#10b981] font-mono-tech text-[8px] whitespace-nowrap shadow-xl">
+        <div class="flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+          <span class="text-[#10b981] font-bold">FR: <span id="pinDegFR">0.0°</span></span>
+        </div>
+        <div id="pinRoleFR" class="text-[6.5px] text-slate-300 uppercase tracking-tight">INNER WHEEL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimized Floating Ackermann Badge (Shown when HUD card is closed) -->
+  <div id="ackermannMiniPill" class="fixed top-24 left-2 sm:left-3 z-30 hud-pod rounded-full px-3 py-1 pointer-events-auto cursor-pointer hover:border-[#00f0ff] transition items-center gap-1.5 font-mono-tech text-[8px]" style="display: none;">
+    <span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+    <span class="text-slate-300">📐 ACKERMANN:</span>
+    <span id="miniAckReadout" class="text-[#00f0ff] font-bold">FL: 0.0° | FR: 0.0°</span>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- FLOATING LEFT ACKERMANN STEERING BLUEPRINT & TELEMETRY HUD              -->
+  <!-- ======================================================================= -->
+  <div id="ackermannHudCard" class="fixed top-24 sm:top-28 left-2 sm:left-3 z-30 w-[270px] sm:w-[292px] hud-pod rounded-2xl p-2.5 sm:p-3 pointer-events-auto transition-all duration-200">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800">
+      <div class="flex items-center gap-1.5">
+        <span class="text-sm">📐</span>
+        <div>
+          <span class="font-display text-[9.5px] sm:text-[10px] font-bold text-white tracking-wider block">ACKERMANN GEOMETRY</span>
+          <span class="font-mono-tech text-[7px] text-[#00f0ff] tracking-tight">TRUE STEERING DYNAMICS</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <span id="ackLiveBadge" class="font-mono-tech text-[7px] px-1.5 py-0.5 rounded-full bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40">100% TRUE</span>
+        <button id="btnAckCardClose" class="text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 text-[8px] font-mono-tech transition" title="Minimize Ackermann HUD">✕</button>
+      </div>
+    </div>
+
+    <!-- Live Dynamic Front Axle Diagram (Overhead Schematic) -->
+    <div class="bg-[#050811] rounded-xl p-2 border border-slate-800/80 relative overflow-hidden mb-2">
+      <div class="text-[7px] font-mono-tech text-slate-400 flex justify-between items-center mb-1">
+        <span>OVERHEAD AXLE SCHEMATIC</span>
+        <span id="ackTurnDirection" class="text-[#00f0ff] font-bold">STRAIGHT • 0.0°</span>
+      </div>
+
+      <!-- SVG Front Axle with dynamically rotating tires -->
+      <svg id="ackSvgAxle" viewBox="0 0 240 70" class="w-full h-[62px]">
+        <defs>
+          <linearGradient id="axleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8" />
+            <stop offset="50%" stop-color="#00f0ff" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.8" />
+          </linearGradient>
+        </defs>
+        <!-- Center Chassis reference line -->
+        <line x1="120" y1="0" x2="120" y2="70" stroke="#334155" stroke-dasharray="2 2" stroke-width="1" />
+        <line x1="32" y1="35" x2="208" y2="35" stroke="url(#axleGrad)" stroke-width="4" stroke-linecap="round" />
+        <!-- Differential center sphere -->
+        <circle cx="120" cy="35" r="9" fill="#0f172a" stroke="#00f0ff" stroke-width="1.5" />
+        <circle cx="120" cy="35" r="3" fill="#00f0ff" />
+        <!-- Steering Tie Rod -->
+        <line x1="42" y1="46" x2="198" y2="46" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+
+        <!-- Left Wheel (FL) Pivot Group (centered at cx=32, cy=35) -->
+        <g id="svgWheelFL" transform="translate(32, 35) rotate(0)">
+          <!-- Tire body -->
+          <rect x="-9" y="-24" width="18" height="48" rx="4" fill="#1e293b" stroke="#00f0ff" stroke-width="1.8" />
+          <!-- Rim hub -->
+          <line x1="0" y1="-16" x2="0" y2="16" stroke="#d97706" stroke-width="2.5" />
+          <circle cx="0" cy="0" r="3.5" fill="#f59e0b" />
+          <!-- Direction Arrow -->
+          <line x1="0" y1="0" x2="0" y2="-28" stroke="#00f0ff" stroke-width="1.5" stroke-dasharray="2 1" />
+        </g>
+
+        <!-- Right Wheel (FR) Pivot Group (centered at cx=208, cy=35) -->
+        <g id="svgWheelFR" transform="translate(208, 35) rotate(0)">
+          <!-- Tire body -->
+          <rect x="-9" y="-24" width="18" height="48" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1.8" />
+          <!-- Rim hub -->
+          <line x1="0" y1="-16" x2="0" y2="16" stroke="#d97706" stroke-width="2.5" />
+          <circle cx="0" cy="0" r="3.5" fill="#f59e0b" />
+          <!-- Direction Arrow -->
+          <line x1="0" y1="0" x2="0" y2="-28" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2 1" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- Live Wheel Angle Gauges (Inner vs Outer) -->
+    <div class="grid grid-cols-2 gap-1.5 text-center font-mono-tech mb-2">
+      <!-- FL Box -->
+      <div class="bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between text-[7px] text-slate-400 mb-0.5">
+          <span>LEFT (FL)</span>
+          <span id="cardRoleFL" class="text-[6.5px] px-1 py-0.2 rounded bg-slate-800 text-slate-300">STRAIGHT</span>
+        </div>
+        <div class="text-[15px] font-bold text-[#00f0ff]" id="cardDegFL">0.0°</div>
+        <div class="text-[6.5px] text-slate-400 mt-0.5" id="cardRadiusFL">R: ∞</div>
+      </div>
+      <!-- FR Box -->
+      <div class="bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between text-[7px] text-slate-400 mb-0.5">
+          <span>RIGHT (FR)</span>
+          <span id="cardRoleFR" class="text-[6.5px] px-1 py-0.2 rounded bg-slate-800 text-slate-300">STRAIGHT</span>
+        </div>
+        <div class="text-[15px] font-bold text-[#10b981]" id="cardDegFR">0.0°</div>
+        <div class="text-[6.5px] text-slate-400 mt-0.5" id="cardRadiusFR">R: ∞</div>
+      </div>
+    </div>
+
+    <!-- Ackermann Delta & Engineering Formula -->
+    <div class="bg-slate-950/80 rounded-xl p-1.5 border border-slate-800/80 font-mono-tech text-[7.5px] space-y-1 mb-2">
+      <div class="flex justify-between items-center text-slate-300">
+        <span>INNER / OUTER DELTA:</span>
+        <span id="cardDeltaDeg" class="text-[#f59e0b] font-bold">Δ 0.0° (PERFECT)</span>
+      </div>
+      <div class="flex justify-between items-center text-slate-400 text-[7px]">
+        <span>TURNING RADIUS (ICR):</span>
+        <span id="cardTurnRadius" class="text-white font-semibold">R = ∞ m</span>
+      </div>
+      <div class="flex justify-between items-center text-slate-400 text-[6.5px] pt-1 border-t border-slate-800/60">
+        <span class="text-slate-500 font-mono">cot(δ_o) - cot(δ_i) = W / L</span>
+        <span class="text-emerald-400 font-semibold">ZERO TIRE SCRUB</span>
+      </div>
+    </div>
+
+    <!-- Quick Steer Test Buttons & Slider -->
+    <div class="space-y-1 font-mono-tech text-[8px]">
+      <div class="flex items-center justify-between text-slate-400 text-[7px]">
+        <span>QUICK STEERING TEST:</span>
+        <button id="btnFocusTopDown" class="text-[#00f0ff] hover:underline flex items-center gap-0.5 transition cursor-pointer">
+          <span>🎥 FOCUS TOP-DOWN</span>
+        </button>
+      </div>
+      <div class="grid grid-cols-5 gap-1">
+        <button data-quicksteer="-28" class="quick-steer-btn cam-pill !px-0.5 !py-0.5 text-[7px] text-center">-28°</button>
+        <button data-quicksteer="-14" class="quick-steer-btn cam-pill !px-0.5 !py-0.5 text-[7px] text-center">-14°</button>
+        <button data-quicksteer="0"   class="quick-steer-btn cam-pill !px-0.5 !py-0.5 text-[7px] text-center active">0°</button>
+        <button data-quicksteer="14"  class="quick-steer-btn cam-pill !px-0.5 !py-0.5 text-[7px] text-center">+14°</button>
+        <button data-quicksteer="28"  class="quick-steer-btn cam-pill !px-0.5 !py-0.5 text-[7px] text-center">+28°</button>
+      </div>
+      <input id="cardSteerSlider" type="range" min="-30" max="30" value="0" class="mt-1" />
+    </div>
+  </div>
 
   <!-- ======================================================================= -->
   <!-- FLOATING RIGHT TELEMETRY, SUSPENSION TUNING & INSTANT CONFIGURATOR POD  -->
@@ -430,6 +610,21 @@
             <span id="steerAngleVal" class="text-[#f59e0b]">0°</span>
           </div>
           <input id="sliderSteerAngle" type="range" min="-32" max="32" value="0" />
+          <!-- Live Ackermann Geometry Breakdown inside Tuning Panel -->
+          <div class="bg-slate-950/70 p-1.5 rounded-lg border border-slate-800/80 mt-1 space-y-0.5 text-[7.5px] font-mono-tech">
+            <div class="flex justify-between text-slate-400">
+              <span>INNER WHEEL:</span>
+              <span id="tuningInnerDeg" class="text-[#10b981] font-bold">0.0° (CTR)</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>OUTER WHEEL:</span>
+              <span id="tuningOuterDeg" class="text-[#00f0ff] font-bold">0.0° (CTR)</span>
+            </div>
+            <div class="flex justify-between text-slate-400 pt-0.5 border-t border-slate-800/60">
+              <span>ACKERMANN Δ:</span>
+              <span id="tuningDeltaDeg" class="text-[#f59e0b] font-bold">Δ 0.0° (ZERO SCRUB)</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -501,6 +696,10 @@
 
       <button id="btnHydraulicJump" class="dock-btn jump-btn shrink-0" title="Launch 4x4 upward to test full suspension slam & rebound">
         <span>🚀 DROP TEST</span>
+      </button>
+
+      <button id="btnDockAckermann" class="dock-btn shrink-0" title="Top-Down View with Live Ackermann Steering Geometry">
+        <span>📐 TOP-DOWN STEER</span>
       </button>
 
       <button id="btnWindTunnel" class="dock-btn shrink-0" title="Toggle 3D real-time aerodynamic flow streamlines">
@@ -962,7 +1161,7 @@
         camRig.prevX = e.clientX;
         camRig.prevY = e.clientY;
         camRig.goalTheta -= dx * 0.0075;
-        camRig.goalPhi = Math.max(0.24, Math.min(1.50, camRig.goalPhi - dy * 0.0065));
+        camRig.goalPhi = Math.max(0.04, Math.min(1.50, camRig.goalPhi - dy * 0.0065));
       } else if (activePointers.size === 2 && initialPinchDistance) {
         const pts = Array.from(activePointers.values());
         const currentDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -2236,6 +2435,136 @@
     document.getElementById('sliderSteerAngle').addEventListener('input', (e) => {
       state.steerAngleDeg = parseInt(e.target.value, 10);
       document.getElementById('steerAngleVal').textContent = `${state.steerAngleDeg}°`;
+      const cs = document.getElementById('cardSteerSlider');
+      if (cs) cs.value = state.steerAngleDeg;
+    });
+
+    // ============================================================================
+    // ACKERMANN STEERING BLUEPRINT CALCULATIONS & TELEMETRY CONTROLLERS
+    // ============================================================================
+    function computeAckermannGeometry(baseSteerDeg) {
+      const absDeg = Math.abs(baseSteerDeg);
+      const L = 2.98; // Rubicon 392 Wheelbase in meters
+      const W = 2.08; // Front track width in meters
+
+      if (absDeg < 0.05) {
+        return {
+          baseDeg: 0,
+          innerDeg: 0,
+          outerDeg: 0,
+          deltaDeg: 0,
+          flDeg: 0,
+          frDeg: 0,
+          roleFL: 'CENTERED',
+          roleFR: 'CENTERED',
+          turnRadius: Infinity,
+          isRight: false,
+          isLeft: false
+        };
+      }
+
+      const baseRad = (absDeg * Math.PI) / 180;
+      const tanBase = Math.tan(baseRad);
+      // Pure Analytical 100% Ackermann Steering Formula:
+      // cot(delta_o) - cot(delta_i) = W / L
+      const halfFactor = (W / (2 * L)) * tanBase;
+      const tanInner = tanBase / Math.max(0.01, 1 - halfFactor);
+      const tanOuter = tanBase / (1 + halfFactor);
+
+      const innerDeg = (Math.atan(tanInner) * 180) / Math.PI;
+      const outerDeg = (Math.atan(tanOuter) * 180) / Math.PI;
+      const deltaDeg = innerDeg - outerDeg;
+      const turnRadius = L / Math.max(0.001, Math.tan(baseRad));
+
+      let flDeg, frDeg, roleFL, roleFR;
+      const isRight = baseSteerDeg > 0;
+
+      if (isRight) {
+        // Turning RIGHT: FR is inner wheel (tight radius), FL is outer wheel (wide radius)
+        frDeg = innerDeg;
+        flDeg = outerDeg;
+        roleFR = 'INNER (TIGHT)';
+        roleFL = 'OUTER (WIDE)';
+      } else {
+        // Turning LEFT: FL is inner wheel (tight radius), FR is outer wheel (wide radius)
+        flDeg = -innerDeg;
+        frDeg = -outerDeg;
+        roleFL = 'INNER (TIGHT)';
+        roleFR = 'OUTER (WIDE)';
+      }
+
+      return {
+        baseDeg: baseSteerDeg,
+        innerDeg,
+        outerDeg,
+        deltaDeg,
+        flDeg,
+        frDeg,
+        roleFL,
+        roleFR,
+        turnRadius,
+        isRight,
+        isLeft: !isRight
+      };
+    }
+
+    const ackCard = document.getElementById('ackermannHudCard');
+    const ackMini = document.getElementById('ackermannMiniPill');
+    const btnAckToggle = document.getElementById('btnAckermannToggle');
+
+    function toggleAckermannHUD(show) {
+      if (!ackCard) return;
+      const isVisible = show !== undefined ? show : (ackCard.style.display === 'none');
+      ackCard.style.display = isVisible ? 'block' : 'none';
+      if (ackMini) ackMini.style.display = isVisible ? 'none' : 'flex';
+      if (btnAckToggle) btnAckToggle.classList.toggle('active', isVisible);
+    }
+
+    const btnAckCardClose = document.getElementById('btnAckCardClose');
+    if (btnAckCardClose) btnAckCardClose.addEventListener('click', () => {
+      toggleAckermannHUD(false);
+      playMechanicalClick(190);
+    });
+
+    if (ackMini) ackMini.addEventListener('click', () => {
+      toggleAckermannHUD(true);
+      playMechanicalClick(210);
+    });
+
+    if (btnAckToggle) btnAckToggle.addEventListener('click', () => {
+      toggleAckermannHUD();
+      playMechanicalClick(200);
+    });
+
+    const btnDockAck = document.getElementById('btnDockAckermann');
+    if (btnDockAck) btnDockAck.addEventListener('click', () => {
+      setCameraViewPreset('topdown');
+      playMechanicalClick(220);
+    });
+
+    const btnFocusTop = document.getElementById('btnFocusTopDown');
+    if (btnFocusTop) btnFocusTop.addEventListener('click', () => {
+      setCameraViewPreset('topdown');
+      playMechanicalClick(220);
+    });
+
+    const cardSteerSlider = document.getElementById('cardSteerSlider');
+    if (cardSteerSlider) {
+      cardSteerSlider.addEventListener('input', (e) => {
+        state.steerAngleDeg = parseInt(e.target.value, 10);
+        document.getElementById('sliderSteerAngle').value = state.steerAngleDeg;
+      });
+    }
+
+    document.querySelectorAll('.quick-steer-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = parseInt(btn.getAttribute('data-quicksteer'), 10);
+        state.steerAngleDeg = val;
+        document.getElementById('sliderSteerAngle').value = val;
+        if (cardSteerSlider) cardSteerSlider.value = val;
+        document.querySelectorAll('.quick-steer-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        playMechanicalClick(215);
+      });
     });
 
     function setCameraViewPreset(mode) {
@@ -2248,6 +2577,12 @@
       if (mode === 'iso') {
         camRig.goalTheta = 0.86; camRig.goalPhi = 1.20; camRig.goalRadius = 10.8;
         camRig.goalTarget.set(0, 1.22, 0.12);
+      } else if (mode === 'topdown') {
+        camRig.goalTheta = Math.PI; 
+        camRig.goalPhi = 0.08; 
+        camRig.goalRadius = 7.4;
+        camRig.goalTarget.set(0, 0.65, 0.85);
+        toggleAckermannHUD(true);
       } else if (mode === 'wheel') {
         camRig.goalTheta = 1.15; camRig.goalPhi = 1.44; camRig.goalRadius = 6.0;
         camRig.goalTarget.set(0.65, 0.78, 1.25);
@@ -2350,6 +2685,112 @@
     // ============================================================================
     // 12. 60-FPS PERFORMANCE-OPTIMIZED RENDER & PHYSICS LOOP
     // ============================================================================
+    function updateAckermannTelemetryUI(ackGeom) {
+      // 1. Dynamic SVG Front Axle Tires rotation:
+      const svgWheelFL = document.getElementById('svgWheelFL');
+      const svgWheelFR = document.getElementById('svgWheelFR');
+      if (svgWheelFL) svgWheelFL.setAttribute('transform', `translate(32, 35) rotate(${ackGeom.flDeg.toFixed(1)})`);
+      if (svgWheelFR) svgWheelFR.setAttribute('transform', `translate(208, 35) rotate(${ackGeom.frDeg.toFixed(1)})`);
+
+      // 2. Ackermann HUD Card Gauges:
+      const cardDegFL = document.getElementById('cardDegFL');
+      const cardDegFR = document.getElementById('cardDegFR');
+      if (cardDegFL) cardDegFL.textContent = `${Math.abs(ackGeom.flDeg).toFixed(1)}°`;
+      if (cardDegFR) cardDegFR.textContent = `${Math.abs(ackGeom.frDeg).toFixed(1)}°`;
+
+      const cardRoleFL = document.getElementById('cardRoleFL');
+      const cardRoleFR = document.getElementById('cardRoleFR');
+      if (cardRoleFL) {
+        cardRoleFL.textContent = ackGeom.roleFL;
+        cardRoleFL.className = `text-[6.5px] px-1 py-0.2 rounded ${ackGeom.roleFL.startsWith('INNER') ? 'bg-[#00f0ff]/20 text-[#00f0ff] font-bold' : (ackGeom.roleFL.startsWith('OUTER') ? 'bg-amber-500/20 text-[#f59e0b]' : 'bg-slate-800 text-slate-300')}`;
+      }
+      if (cardRoleFR) {
+        cardRoleFR.textContent = ackGeom.roleFR;
+        cardRoleFR.className = `text-[6.5px] px-1 py-0.2 rounded ${ackGeom.roleFR.startsWith('INNER') ? 'bg-[#10b981]/20 text-[#10b981] font-bold' : (ackGeom.roleFR.startsWith('OUTER') ? 'bg-amber-500/20 text-[#f59e0b]' : 'bg-slate-800 text-slate-300')}`;
+      }
+
+      const cardRadiusFL = document.getElementById('cardRadiusFL');
+      const cardRadiusFR = document.getElementById('cardRadiusFR');
+      if (cardRadiusFL) cardRadiusFL.textContent = ackGeom.turnRadius === Infinity ? 'R: ∞' : `R: ${(Math.max(1, ackGeom.turnRadius + (ackGeom.flDeg < 0 ? -1.04 : 1.04))).toFixed(1)}m`;
+      if (cardRadiusFR) cardRadiusFR.textContent = ackGeom.turnRadius === Infinity ? 'R: ∞' : `R: ${(Math.max(1, ackGeom.turnRadius + (ackGeom.frDeg > 0 ? -1.04 : 1.04))).toFixed(1)}m`;
+
+      const cardDeltaDeg = document.getElementById('cardDeltaDeg');
+      if (cardDeltaDeg) {
+        cardDeltaDeg.textContent = `Δ +${ackGeom.deltaDeg.toFixed(1)}° (INNER ADVANTAGE)`;
+      }
+
+      const cardTurnRadius = document.getElementById('cardTurnRadius');
+      if (cardTurnRadius) {
+        cardTurnRadius.textContent = ackGeom.turnRadius === Infinity ? 'R = ∞ m (STRAIGHT)' : `R = ${ackGeom.turnRadius.toFixed(1)} m`;
+      }
+
+      const ackTurnDirection = document.getElementById('ackTurnDirection');
+      if (ackTurnDirection) {
+        const rounded = Math.round(state.smoothedSteerDeg);
+        ackTurnDirection.textContent = rounded > 1 ? `► RIGHT TURN (+${rounded}°) [ICR ACTIVE]` : (rounded < -1 ? `◄ LEFT TURN (${rounded}°) [ICR ACTIVE]` : 'STRAIGHT • 0.0° [PARALLEL]');
+      }
+
+      // 3. Side Tuning Panel live readouts:
+      const tuningInner = document.getElementById('tuningInnerDeg');
+      const tuningOuter = document.getElementById('tuningOuterDeg');
+      const tuningDelta = document.getElementById('tuningDeltaDeg');
+      if (tuningInner) tuningInner.textContent = `${ackGeom.innerDeg.toFixed(1)}° (${ackGeom.isRight ? 'FR' : (ackGeom.isLeft ? 'FL' : 'CTR')})`;
+      if (tuningOuter) tuningOuter.textContent = `${ackGeom.outerDeg.toFixed(1)}° (${ackGeom.isRight ? 'FL' : (ackGeom.isLeft ? 'FR' : 'CTR')})`;
+      if (tuningDelta) tuningDelta.textContent = `Δ +${ackGeom.deltaDeg.toFixed(1)}° (ZERO SCRUB)`;
+
+      // 4. Minimized pill readout:
+      const miniAckReadout = document.getElementById('miniAckReadout');
+      if (miniAckReadout) {
+        miniAckReadout.textContent = `FL: ${Math.abs(ackGeom.flDeg).toFixed(1)}° | FR: ${Math.abs(ackGeom.frDeg).toFixed(1)}° (Δ +${ackGeom.deltaDeg.toFixed(1)}°)`;
+      }
+    }
+
+    const ackPinProj = new THREE.Vector3();
+    function updateAckermannWheelPins(ackGeom) {
+      const pinFL = document.getElementById('ackPinFL');
+      const pinFR = document.getElementById('ackPinFR');
+      if (!pinFL || !pinFR || !wheelNodes[0] || !wheelNodes[1]) return;
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // Project FL wheel hub world pos
+      wheelNodes[0].wheelPivot.getWorldPosition(ackPinProj);
+      ackPinProj.y += 0.52; // Hover cleanly above top of 37-inch tire
+      ackPinProj.project(camera);
+      if (ackPinProj.z < 1) {
+        const sx = (ackPinProj.x * 0.5 + 0.5) * w;
+        const sy = (-ackPinProj.y * 0.5 + 0.5) * h;
+        pinFL.style.left = `${sx}px`;
+        pinFL.style.top = `${sy}px`;
+        pinFL.style.opacity = '1';
+        const elDeg = document.getElementById('pinDegFL');
+        const elRole = document.getElementById('pinRoleFL');
+        if (elDeg) elDeg.textContent = `${Math.abs(ackGeom.flDeg).toFixed(1)}°`;
+        if (elRole) elRole.textContent = ackGeom.roleFL;
+      } else {
+        pinFL.style.opacity = '0';
+      }
+
+      // Project FR wheel hub world pos
+      wheelNodes[1].wheelPivot.getWorldPosition(ackPinProj);
+      ackPinProj.y += 0.52;
+      ackPinProj.project(camera);
+      if (ackPinProj.z < 1) {
+        const sx = (ackPinProj.x * 0.5 + 0.5) * w;
+        const sy = (-ackPinProj.y * 0.5 + 0.5) * h;
+        pinFR.style.left = `${sx}px`;
+        pinFR.style.top = `${sy}px`;
+        pinFR.style.opacity = '1';
+        const elDeg = document.getElementById('pinDegFR');
+        const elRole = document.getElementById('pinRoleFR');
+        if (elDeg) elDeg.textContent = `${Math.abs(ackGeom.frDeg).toFixed(1)}°`;
+        if (elRole) elRole.textContent = ackGeom.roleFR;
+      } else {
+        pinFR.style.opacity = '0';
+      }
+    }
+
     const clock = new THREE.Clock();
     let frameCounter = 0;
     let fpsAccumTime = 0;
@@ -2499,6 +2940,10 @@
       state.smoothedSteerDeg += (totalSteerDeg - state.smoothedSteerDeg) * Math.min(1, dt * 6.5);
       const baseSteerRad = (state.smoothedSteerDeg * Math.PI) / 180;
 
+      // Authentic Analytical Ackermann Steering Geometry:
+      const ackGeom = computeAckermannGeometry(state.smoothedSteerDeg);
+      state.ackGeom = ackGeom;
+
       // 2. Realistic Vehicle Yaw & Road Following (റിയലായിട്ട് വളവുകൾ തിരിയുന്നത്):
       // The vehicle body smoothly points along the road heading with silky damping:
       const roadHeading = Math.atan2(getCurvedRoadX(2.2, state.anim.terrainTime) - getCurvedRoadX(-2.2, state.anim.terrainTime), 4.4);
@@ -2534,12 +2979,10 @@
         w.wheelPivot.position.set(outX, 0.50 + w.currentLift, w.z);
 
         if (w.isFront) {
-          // Authentic Ackermann steering geometry: inside wheel turns slightly sharper into curve
+          // True Analytical Ackermann steering geometry: inside wheel turns sharper into curve
           const isRightWheel = w.x > 0;
-          const ackermannFactor = (state.smoothedSteerDeg > 0 && isRightWheel) || (state.smoothedSteerDeg < 0 && !isRightWheel)
-            ? 1.08
-            : 0.92;
-          w.wheelPivot.rotation.y = baseSteerRad * ackermannFactor;
+          const steerDeg = isRightWheel ? ackGeom.frDeg : ackGeom.flDeg;
+          w.wheelPivot.rotation.y = (steerDeg * Math.PI) / 180;
         }
         if (state.driveOnRocks) {
           w.wheelMesh.rotation.x += dt * 6.5 * state.crawlSpeed;
@@ -2548,6 +2991,8 @@
         const pct = Math.min(100, Math.max(15, Math.round(24 + (w.currentLift / 0.36) * 76)));
         if (w.barEl) w.barEl.style.height = `${pct}%`;
       }
+
+      updateAckermannTelemetryUI(ackGeom);
 
       const fl = wheelNodes[0].currentLift;
       const fr = wheelNodes[1].currentLift;
@@ -2639,6 +3084,7 @@
 
       renderer.render(scene, camera);
       updateCalloutsOverlay();
+      if (state.ackGeom) updateAckermannWheelPins(state.ackGeom);
     }
 
     function handleScreenResize() {
