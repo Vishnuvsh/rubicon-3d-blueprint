@@ -6,6 +6,8 @@
   <title>TRAIL-HAWK 4X4 RUBICON // Hyper-Realistic 3D Off-Road Configurator & Physics Sim</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GoatCounter Real-Time Privacy Analytics -->
+  <script data-goatcounter="https://vishnuv.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -1765,10 +1767,12 @@
         const dx = wx - b.baseX;
         const dz = wz - b.z;
         const distSq = dx * dx + dz * dz;
-        const effectiveR = b.radius + 0.30;
+        const effectiveR = b.radius + 0.32;
         if (distSq < effectiveR * effectiveR) {
           const dist = Math.sqrt(distSq);
-          const dome = Math.cos((dist / effectiveR) * (Math.PI / 2));
+          // Silky-smooth C1 continuous bell profile: zero slope at center, zero slope at boundary
+          const u = dist / effectiveR;
+          const dome = 0.5 * (1.0 + Math.cos(u * Math.PI));
           const h = dome * b.baseScaleH * 0.56 * state.rockHeightScale;
           if (h > maxLift) maxLift = h;
         }
@@ -2323,7 +2327,10 @@
           b.mesh.position.x = roadX + b.trackLateralOffset;
           b.mesh.position.z = b.z;
           b.baseX = b.mesh.position.x;
-          b.mesh.scale.y = Math.max(0.05, b.baseScaleH * state.rockHeightScale);
+          // Smooth edge fade at the boundaries prevents any visual pop-in:
+          const edgeDist = 14.0 - Math.abs(b.z);
+          const edgeFade = Math.min(1.0, Math.max(0.06, edgeDist / 2.2));
+          b.mesh.scale.y = Math.max(0.04, b.baseScaleH * state.rockHeightScale * edgeFade);
         }
 
         for (let i = 0; i < roadsideProps.length; i++) {
@@ -2376,25 +2383,26 @@
       // Realistic, natural front tire steering angle (±4° to ±10° natural road steering)
       const autoSteerDeg = state.driveOnRocks ? Math.max(-10, Math.min(10, (steerAngleRad * 180 / Math.PI) * 1.15)) : 0;
       const totalSteerDeg = Math.max(-28, Math.min(28, state.steerAngleDeg + autoSteerDeg));
-      const baseSteerRad = (totalSteerDeg * Math.PI) / 180;
+
+      // Hydraulic power steering progressive smoothing filter:
+      if (typeof state.smoothedSteerDeg === 'undefined') state.smoothedSteerDeg = 0;
+      state.smoothedSteerDeg += (totalSteerDeg - state.smoothedSteerDeg) * Math.min(1, dt * 6.5);
+      const baseSteerRad = (state.smoothedSteerDeg * Math.PI) / 180;
 
       // 2. Realistic Vehicle Yaw & Road Following (റിയലായിട്ട് വളവുകൾ തിരിയുന്നത്):
-      // The vehicle body smoothly points along the road heading like a real vehicle negotiating a bend!
-      const roadHeading = Math.atan2(getCurvedRoadX(1.8, state.anim.terrainTime) - getCurvedRoadX(-1.8, state.anim.terrainTime), 3.6);
-      if (state.driveOnRocks) {
-        cruiserRoot.rotation.y += (roadHeading * 0.42 - cruiserRoot.rotation.y) * Math.min(1, dt * 3.5);
-      } else {
-        cruiserRoot.rotation.y += (-cruiserRoot.rotation.y) * Math.min(1, dt * 4.0);
-      }
+      // The vehicle body smoothly points along the road heading with silky damping:
+      const roadHeading = Math.atan2(getCurvedRoadX(2.2, state.anim.terrainTime) - getCurvedRoadX(-2.2, state.anim.terrainTime), 4.4);
+      const targetYaw = state.driveOnRocks ? roadHeading * 0.40 : 0;
+      cruiserRoot.rotation.y += (targetYaw - cruiserRoot.rotation.y) * Math.min(1, dt * 3.2);
 
-      // Update Live HUD Steering Telemetry Readout
+      // Update Live HUD Steering Telemetry Readout with smoothed angle
       const steerReadoutEl = document.getElementById('steerAngleVal');
       if (steerReadoutEl) {
-        const rounded = Math.round(totalSteerDeg);
+        const rounded = Math.round(state.smoothedSteerDeg);
         steerReadoutEl.textContent = `${rounded > 0 ? '+' : ''}${rounded}° ${rounded > 2 ? '► RIGHT' : (rounded < -2 ? '◄ LEFT' : '• CTR')}`;
       }
 
-      // 3. Per-Wheel Rock-Crawling Physics with Exact World-Position Sampling
+      // 3. Per-Wheel Rock-Crawling Physics with Compliant Damping
       const cosCar = Math.cos(cruiserRoot.rotation.y);
       const sinCar = Math.sin(cruiserRoot.rotation.y);
 
@@ -2404,8 +2412,11 @@
         const worldWheelX = w.x * cosCar + w.z * sinCar;
         const worldWheelZ = -w.x * sinCar + w.z * cosCar;
         const targetLift = sampleRockHeightAt(worldWheelX, worldWheelZ);
-        const springRate = targetLift > w.currentLift ? 58 : 30;
-        const accel = (targetLift - w.currentLift) * springRate - w.velLift * 9.2;
+
+        // Smooth critically-damped compliant tire bounce:
+        const springRate = targetLift > w.currentLift ? 45 : 26;
+        const damping = targetLift > w.currentLift ? 12.8 : 9.6;
+        const accel = (targetLift - w.currentLift) * springRate - w.velLift * damping;
         w.velLift += accel * dt;
         w.currentLift = Math.max(0, w.currentLift + w.velLift * dt);
 
@@ -2415,7 +2426,7 @@
         if (w.isFront) {
           // Authentic Ackermann steering geometry: inside wheel turns slightly sharper into curve
           const isRightWheel = w.x > 0;
-          const ackermannFactor = (totalSteerDeg > 0 && isRightWheel) || (totalSteerDeg < 0 && !isRightWheel)
+          const ackermannFactor = (state.smoothedSteerDeg > 0 && isRightWheel) || (state.smoothedSteerDeg < 0 && !isRightWheel)
             ? 1.08
             : 0.92;
           w.wheelPivot.rotation.y = baseSteerRad * ackermannFactor;
@@ -2441,22 +2452,23 @@
 
       // 4. Second-Order Spring-Damper Physics for Chassis Body + Instant Lift Kit Offset
       const avgLift = (fl + fr + rl + rr) * 0.25;
-      const goalY = state.liftKitOffset + avgLift * 0.66 + state.jumpOffset;
-      const goalPitch = -Math.atan2(((fl + fr) * 0.5) - ((rl + rr) * 0.5), 2.98) * 0.88;
+      const goalY = state.liftKitOffset + avgLift * 0.65 + state.jumpOffset;
+      const goalPitch = -Math.atan2(((fl + fr) * 0.5) - ((rl + rr) * 0.5), 2.98) * 0.82;
 
-      // Authentic rock-crawling body articulation from original + subtle centrifugal lean in turns:
+      // Authentic rock-crawling body articulation with optimal damping:
       const axleTilt = Math.atan2(((fr + rr) * 0.5) - ((fl + rl) * 0.5), 2.08);
-      const turnRoll = -(totalSteerDeg * Math.PI / 180) * 0.05;
-      const goalRoll = axleTilt * 0.82 + turnRoll;
+      const turnRoll = -(state.smoothedSteerDeg * Math.PI / 180) * 0.04;
+      const goalRoll = axleTilt * 0.76 + turnRoll;
 
       const cp = state.chassisPhys;
-      cp.vy += ((goalY - cp.y) * 42 - cp.vy * 6.0) * dt;
+      // Golden Ratio Damping (0.75 critical) stops all wobble/jitter, providing heavy, smooth luxury ride:
+      cp.vy += ((goalY - cp.y) * 36 - cp.vy * 9.5) * dt;
       cp.y += cp.vy * dt;
 
-      cp.vPitch += ((goalPitch - cp.pitch) * 44 - cp.vPitch * 5.6) * dt;
+      cp.vPitch += ((goalPitch - cp.pitch) * 38 - cp.vPitch * 9.2) * dt;
       cp.pitch += cp.vPitch * dt;
 
-      cp.vRoll += ((goalRoll - cp.roll) * 42 - cp.vRoll * 5.6) * dt;
+      cp.vRoll += ((goalRoll - cp.roll) * 36 - cp.vRoll * 9.0) * dt;
       cp.roll += cp.vRoll * dt;
 
       sprungMassGroup.position.y = cp.y;
