@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRAIL-HAWK 4X4 RUBICON // Hyper-Realistic 3D Off-Road Configurator & Physics Sim</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #060911;
+      --hud-glass: rgba(9, 14, 26, 0.78);
+      --hud-border: rgba(56, 189, 248, 0.26);
+      --neon-cyan: #00f0ff;
+      --neon-emerald: #10b981;
+      --neon-amber: #f59e0b;
+      --neon-rose: #f43f5e;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #070d17;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .font-display {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hud-pod {
+      background: var(--hud-glass);
+      border: 1px solid var(--hud-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .dock-btn {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: #cbd5e1;
+      transition: all 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      border-radius: 9999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .dock-btn:hover {
+      border-color: var(--neon-cyan);
+      color: #ffffff;
+      transform: translateY(-1.5px);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+    }
+
+    .dock-btn.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.26), rgba(16, 185, 129, 0.26));
+      border-color: var(--neon-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.34), inset 0 0 8px rgba(0, 240, 255, 0.22);
+    }
+
+    .dock-btn.jump-btn {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(244, 63, 94, 0.3));
+      border-color: rgba(245, 158, 11, 0.75);
+      color: #fde68a;
+    }
+    .dock-btn.jump-btn:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.5), rgba(244, 63, 94, 0.5));
+      box-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+    }
+
+    .cam-pill {
+      padding: 5px 9px;
+      border-radius: 9999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      cursor: pointer;
+      transition: all 0.12s ease;
+      white-space: nowrap;
+    }
+
+    .cam-pill:hover {
+      color: #ffffff;
+      border-color: rgba(0, 240, 255, 0.55);
+    }
+
+    .cam-pill.active {
+      color: #060911;
+      background: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.5);
+    }
+
+    .swatch-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .swatch-dot:hover {
+      transform: scale(1.18);
+    }
+    .swatch-dot.selected {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transform: scale(1.15);
+    }
+
+    .holo-tag {
+      position: absolute;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      z-index: 20;
+      will-change: transform, left, top;
+    }
+    .holo-tag:hover {
+      transform: scale(1.06);
+      z-index: 30;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.28);
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+      cursor: pointer;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+  <!-- 3D WebGL Viewport Container -->
+  <div id="canvasContainer" class="absolute inset-0 z-10 cursor-grab active:cursor-grabbing"></div>
+
+  <!-- Dynamic SVG Holographic Tethers Overlay -->
+  <svg id="calloutSvgOverlay" style="display: none;" class="pointer-events-none absolute inset-0 w-full h-full z-15">
+    <defs>
+      <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.9" />
+        <stop offset="100%" stop-color="#10b981" stop-opacity="0.25" />
+      </linearGradient>
+    </defs>
+    <g id="leaderLinesGroup"></g>
+  </svg>
+
+  <!-- Floating 3D Holographic Hotspots -->
+  <div id="calloutsContainer" style="display: none;" class="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+    <div id="callout-1" data-callout="1" class="holo-tag">
+      <div class="hud-pod rounded-lg px-2.5 py-1 flex items-center gap-2 border-l-2 border-l-[#00f0ff]">
+        <span class="w-2 h-2 rounded-full bg-[#00f0ff] animate-ping"></span>
+        <div>
+          <div class="font-mono-tech text-[8.5px] font-bold text-[#00f0ff] tracking-wider">EXPEDITION RACK &amp; LED BAR</div>
+          <div class="text-[7.5px] text-slate-300">6-Pod Lumen Array + Modular Roof Gear</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="callout-2" data-callout="2" class="holo-tag">
+      <div class="hud-pod rounded-lg px-2.5 py-1 flex items-center gap-2 border-l-2 border-l-[#f59e0b]">
+        <span class="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></span>
+        <div>
+          <div class="font-mono-tech text-[8.5px] font-bold text-[#f59e0b] tracking-wider">392 HEMI V8 POWER-DOME</div>
+          <div class="text-[7.5px] text-slate-300">7-Slot Grille, Warn Winch &amp; Snorkel</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="callout-3" data-callout="3" class="holo-tag">
+      <div class="hud-pod rounded-lg px-2.5 py-1 flex items-center gap-2 border-l-2 border-l-[#10b981]">
+        <span class="w-2 h-2 rounded-full bg-[#10b981]"></span>
+        <div>
+          <div class="font-mono-tech text-[8.5px] font-bold text-[#10b981] tracking-wider">4-DOOR RUBICON CABIN</div>
+          <div class="text-[7.5px] text-slate-300">4 Hinged Doors + Swing Tailgate</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="callout-4" data-callout="4" class="holo-tag">
+      <div class="hud-pod rounded-lg px-2.5 py-1 flex items-center gap-2 border-l-2 border-l-[#f43f5e]">
+        <span class="w-2 h-2 rounded-full bg-[#f43f5e] animate-ping"></span>
+        <div>
+          <div class="font-mono-tech text-[8.5px] font-bold text-[#f43f5e] tracking-wider">FOX 3.0 BYPASS COILOVERS</div>
+          <div class="text-[7.5px] text-slate-300">4-Link Solid Axles + 37" Beadlocks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- TOP MISSION-CONTROL TELEMETRY & MULTI-LOCATION SELECTOR HEADER          -->
+  <!-- ======================================================================= -->
+  <header class="fixed top-2.5 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none">
+    
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand & Performance Badge -->
+      <div class="hud-pod rounded-2xl px-3.5 py-2 flex items-center gap-3 pointer-events-auto">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-[#00f0ff]/25 to-[#10b981]/25 border border-[#00f0ff]/50 flex items-center justify-center">
+          <svg class="w-4 h-4 text-[#00f0ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+            <line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display text-xs sm:text-sm font-extrabold tracking-wider text-white">RUBICON <span class="text-[#00f0ff]">392 4X4²</span></span>
+            <span id="fpsBadge" class="font-mono-tech text-[8px] px-2 py-0.5 rounded-full bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40">60 FPS • PMREM PBR</span>
+          </div>
+          <div id="statusReadout" class="font-mono-tech text-[8.5px] text-slate-300 mt-0.5">
+            LOCATION: MUNNAR WESTERN GHATS FOREST TRAIL • ACTIVE ROCK CRAWL
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera Director & Audio -->
+      <div class="hud-pod rounded-2xl px-3 py-1.5 flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        <span class="font-mono-tech text-[8.5px] text-slate-400 uppercase px-1">CAMERA:</span>
+        <button data-cam="iso" class="cam-btn cam-pill active">DRONE</button>
+        <button data-cam="wheel" class="cam-btn cam-pill">SHOCK CAM</button>
+        <button data-cam="side" class="cam-btn cam-pill">PROFILE</button>
+        <button data-cam="front" class="cam-btn cam-pill">FRONT</button>
+        <button data-cam="rear" class="cam-btn cam-pill">REAR</button>
+        <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+        <div class="text-right pr-1">
+          <span class="font-display text-xs font-bold text-[#00f0ff]" id="speedReadout">46</span>
+          <span class="font-mono-tech text-[8px] text-slate-400">KM/H</span>
+        </div>
+        <button id="btnAudioToggle" class="dock-btn !py-1 !px-2.5">
+          <span>🔊 SFX: OFF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 8 REALISTIC OFF-ROAD LOCATIONS (BIOME SELECTOR BAR) -->
+    <div class="hud-pod rounded-full px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto custom-scroll pointer-events-auto self-start max-w-full">
+      <span class="font-mono-tech text-[9px] font-bold text-[#00f0ff] uppercase px-2 shrink-0">🌍 SELECT LOCATION:</span>
+      <button data-biome="munnar" class="biome-btn cam-pill active">🌲 MUNNAR FOREST (KERALA)</button>
+      <button data-biome="moab" class="biome-btn cam-pill">🏜️ MOAB RED ROCK DESERT</button>
+      <button data-biome="ladakh" class="biome-btn cam-pill">🏔️ LADAKH SNOW PASS</button>
+      <button data-biome="beach" class="biome-btn cam-pill">🌊 COASTAL BEACH DUNES</button>
+      <button data-biome="volcano" class="biome-btn cam-pill">🌋 VOLCANIC LAVA TRAIL</button>
+      <button data-biome="mars" class="biome-btn cam-pill">🌋 MARS CANYON</button>
+      <button data-biome="arctic" class="biome-btn cam-pill">❄️ GLACIER NIGHT</button>
+      <button data-biome="cyber" class="biome-btn cam-pill">⚡ CYBER LAB</button>
+    </div>
+
+  </header>
+
+  <!-- ======================================================================= -->
+  <!-- FLOATING RIGHT TELEMETRY, SUSPENSION TUNING & INSTANT CONFIGURATOR POD  -->
+  <!-- ======================================================================= -->
+  <aside class="fixed top-28 right-3 z-30 w-[276px] flex flex-col gap-2.5 pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto custom-scroll pr-0.5">
+    
+    <!-- Live 60-FPS 4-Channel Suspension Oscilloscope & Tuning Card -->
+    <div class="hud-pod rounded-2xl p-2.5">
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-mono-tech text-[9px] font-bold tracking-wider uppercase text-[#00f0ff] flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+          LIVE 4-LINK ARTICULATION
+        </span>
+        <span id="polyCountReadout" class="font-mono-tech text-[8px] text-slate-400">245K TRIS</span>
+      </div>
+
+      <div id="pitchRollReadout" class="font-mono-tech text-[8.5px] font-semibold text-emerald-400 mb-1">
+        PITCH: 0.0° | ROLL: 0.0°
+      </div>
+
+      <!-- Real-Time Waveform Canvas -->
+      <canvas id="oscilloscopeCanvas" width="250" height="58" class="w-full h-[58px] rounded-lg bg-[#050811] border border-slate-800"></canvas>
+
+      <!-- 4-Wheel Travel Bars (FL, FR, RL, RR) -->
+      <div class="grid grid-cols-4 gap-1.5 mt-1.5 text-center font-mono-tech text-[8px]">
+        <div class="bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+          <div class="h-6 bg-slate-950 rounded relative overflow-hidden flex items-end">
+            <div id="barFL" class="w-full bg-gradient-to-t from-[#00f0ff] to-[#38bdf8]" style="height:50%"></div>
+          </div>
+          <span class="block mt-0.5 text-[#00f0ff] font-bold">FL</span>
+        </div>
+        <div class="bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+          <div class="h-6 bg-slate-950 rounded relative overflow-hidden flex items-end">
+            <div id="barFR" class="w-full bg-gradient-to-t from-[#10b981] to-[#34d399]" style="height:50%"></div>
+          </div>
+          <span class="block mt-0.5 text-[#10b981] font-bold">FR</span>
+        </div>
+        <div class="bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+          <div class="h-6 bg-slate-950 rounded relative overflow-hidden flex items-end">
+            <div id="barRL" class="w-full bg-gradient-to-t from-[#f59e0b] to-[#fbbf24]" style="height:50%"></div>
+          </div>
+          <span class="block mt-0.5 text-[#f59e0b] font-bold">RL</span>
+        </div>
+        <div class="bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+          <div class="h-6 bg-slate-950 rounded relative overflow-hidden flex items-end">
+            <div id="barRR" class="w-full bg-gradient-to-t from-[#f43f5e] to-[#fb7185]" style="height:50%"></div>
+          </div>
+          <span class="block mt-0.5 text-[#f43f5e] font-bold">RR</span>
+        </div>
+      </div>
+
+      <!-- Sliders for Instant Suspension Lift, Rock Size, Crawl Speed & Steering -->
+      <div class="space-y-1.5 mt-2 pt-2 border-t border-slate-800/80 font-mono-tech text-[8px]">
+        <div>
+          <div class="flex justify-between text-slate-300 mb-0.5">
+            <span>SUSPENSION LIFT KIT</span>
+            <span id="liftKitVal" class="text-[#f43f5e]">+2.5 INCH</span>
+          </div>
+          <input id="sliderLiftKit" type="range" min="0" max="60" value="25" />
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-300 mb-0.5">
+            <span>ROCK &amp; BOULDER SIZE</span>
+            <span id="rockHeightVal" class="text-[#00f0ff]">125%</span>
+          </div>
+          <input id="sliderRockHeight" type="range" min="20" max="200" value="125" />
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-300 mb-0.5">
+            <span>DRIVE SPEED</span>
+            <span id="crawlSpeedVal" class="text-[#10b981]">1.2x</span>
+          </div>
+          <input id="sliderCrawlSpeed" type="range" min="2" max="28" value="12" />
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-300 mb-0.5">
+            <span>FRONT WHEEL STEERING</span>
+            <span id="steerAngleVal" class="text-[#f59e0b]">0°</span>
+          </div>
+          <input id="sliderSteerAngle" type="range" min="-32" max="32" value="0" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Instantaneous Paint, Finish & Modular Part Swapper -->
+    <div class="hud-pod rounded-2xl p-2.5">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-mono-tech text-[9px] font-bold tracking-wider uppercase text-white">🎨 INSTANT CONFIGURATOR</span>
+        <button id="btnResetColors" class="font-mono-tech text-[8px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          ↺ RESET
+        </button>
+      </div>
+
+      <!-- Paint Finish Type Selector (Gloss / Matte / Metallic) -->
+      <div class="grid grid-cols-3 gap-1 mb-1.5">
+        <button data-finish="gloss" class="finish-btn cam-pill active !px-1 !py-1 !text-[7.5px]">GLOSS CLEAR</button>
+        <button data-finish="matte" class="finish-btn cam-pill !px-1 !py-1 !text-[7.5px]">SATIN MATTE</button>
+        <button data-finish="chrome" class="finish-btn cam-pill !px-1 !py-1 !text-[7.5px]">LIQUID METAL</button>
+      </div>
+
+      <!-- Target Part Selector Tabs -->
+      <div class="grid grid-cols-4 gap-1 mb-2">
+        <button data-part="body" class="part-tab cam-pill active !px-1 !py-1 !text-[8px]">BODY</button>
+        <button data-part="armor" class="part-tab cam-pill !px-1 !py-1 !text-[8px]">CAGE</button>
+        <button data-part="springs" class="part-tab cam-pill !px-1 !py-1 !text-[8px]">COILS</button>
+        <button data-part="rims" class="part-tab cam-pill !px-1 !py-1 !text-[8px]">RIMS</button>
+      </div>
+
+      <div id="colorPaletteGrid" class="grid grid-cols-8 gap-1.5 justify-items-center"></div>
+
+      <!-- Instant Modular Hardware Swappers -->
+      <div class="grid grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-slate-800/80">
+        <button id="btnSwapBumper" class="cam-pill !py-1 !text-[7.5px]">BUMPER: STINGER</button>
+        <button id="btnSwapRack" class="cam-pill active !py-1 !text-[7.5px]">RACK: EXPEDITION</button>
+      </div>
+
+      <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-slate-800/80">
+        <button data-focus="body" class="mat-card group text-center focus:outline-none">
+          <canvas id="matThumbBody" width="60" height="36" class="w-full rounded border border-slate-700 group-hover:border-[#00f0ff] transition"></canvas>
+          <span class="block font-mono-tech text-[7px] text-slate-400 mt-0.5 group-hover:text-white">SHELL</span>
+        </button>
+        <button data-focus="suspension" class="mat-card group text-center focus:outline-none">
+          <canvas id="matThumbSpring" width="60" height="36" class="w-full rounded border border-slate-700 group-hover:border-[#00f0ff] transition"></canvas>
+          <span class="block font-mono-tech text-[7px] text-slate-400 mt-0.5 group-hover:text-white">SHOCKS</span>
+        </button>
+        <button data-focus="engine" class="mat-card group text-center focus:outline-none">
+          <canvas id="matThumbCage" width="60" height="36" class="w-full rounded border border-slate-700 group-hover:border-[#00f0ff] transition"></canvas>
+          <span class="block font-mono-tech text-[7px] text-slate-400 mt-0.5 group-hover:text-white">V8 CORE</span>
+        </button>
+        <button data-focus="wheels" class="mat-card group text-center focus:outline-none">
+          <canvas id="matThumbTire" width="60" height="36" class="w-full rounded border border-slate-700 group-hover:border-[#00f0ff] transition"></canvas>
+          <span class="block font-mono-tech text-[7px] text-slate-400 mt-0.5 group-hover:text-white">TIRES</span>
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ======================================================================= -->
+  <!-- BOTTOM CURVED SIM-COCKPIT COMMAND DOCK                                  -->
+  <!-- ======================================================================= -->
+  <nav class="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 max-w-[96vw] pointer-events-auto">
+    <div class="hud-pod rounded-full px-3.5 py-2 flex flex-wrap items-center justify-center gap-1.5">
+      
+      <button id="btnDriveRocks" class="dock-btn active">
+        <span class="w-2 h-2 rounded-full bg-[#10b981] animate-ping"></span>
+        <span id="driveBtnLabel">TERRAIN CRAWL: ON</span>
+      </button>
+
+      <button id="btnHydraulicJump" class="dock-btn jump-btn" title="Launch 4x4 upward to test full suspension slam & rebound">
+        <span>🚀 HYDRAULIC DROP TEST</span>
+      </button>
+
+      <button id="btnWindTunnel" class="dock-btn" title="Toggle 3D real-time aerodynamic flow streamlines">
+        <span>🌪️ CFD WIND TUNNEL</span>
+      </button>
+
+      <button id="btnXrayScanner" class="dock-btn" title="Make body shell translucent to inspect internal V8 & drivetrain">
+        <span>🔬 X-RAY SCANNER</span>
+      </button>
+
+      <button id="btnOpenDoors" class="dock-btn">
+        <span>🚪 DOORS &amp; TAILGATE</span>
+      </button>
+
+      <button id="btnOpenHood" class="dock-btn">
+        <span>⚙️ V8 HOOD</span>
+      </button>
+
+      <button id="btnExploded" class="dock-btn">
+        <span>💥 EXPLODE MATRIX</span>
+      </button>
+
+      <button id="btnWireframe" class="dock-btn">
+        <span>🕸️ WIREFRAME</span>
+      </button>
+
+      <button id="btnLights" class="dock-btn active">
+        <span>💡 LUMEN ARRAY</span>
+      </button>
+
+      <button id="btnRotateModel" class="dock-btn">
+        <span>🔄 AUTO-ORBIT</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <script>
+    // ============================================================================
+    // 1. STATE, BIOME DEFINITIONS & AUTOMOTIVE FINISH CONFIGURATION
+    // ============================================================================
+    const state = {
+      driveOnRocks: true,
+      windTunnel: false,
+      xrayMode: false,
+      doorsOpen: false,
+      hoodOpen: false,
+      rotateModel: false,
+      wireframe: false,
+      lightsOn: true,
+      explodedView: false,
+      audioEnabled: false,
+      stingerBumper: true,
+      expeditionRack: true,
+      paintFinish: 'gloss',
+      biome: 'munnar',
+      liftKitOffset: 0.10,   // +2.5 inch default suspension lift
+      rockHeightScale: 1.25,
+      crawlSpeed: 1.2,
+      steerAngleDeg: 0,
+      jumpVelocity: 0,
+      jumpOffset: 0,
+      activePartTab: 'body',
+      colors: {
+        body: '#b91c1c',     // Rubicon Firecracker Red Clearcoat
+        armor: '#18181b',    // Satin Powdercoat Black Armor
+        springs: '#ef4444',  // Fox Factory Anodized Red Coils
+        rims: '#d97706'      // Method Race Bronze Beadlock
+      },
+      anim: {
+        doors: 0,
+        hood: 0,
+        exploded: 0,
+        terrainTime: 0
+      },
+      chassisPhys: {
+        y: 0.10,
+        vy: 0,
+        pitch: 0,
+        vPitch: 0,
+        roll: 0,
+        vRoll: 0
+      }
+    };
+
+    const defaultColors = { ...state.colors };
+
+    const paletteSwatches = [
+      '#b91c1c', '#15803d', '#0369a1', '#d97706', '#3f6212', '#c2410c', '#e2e8f0', '#334155',
+      '#0ea5e9', '#10b981', '#f43f5e', '#eab308', '#7c3aed', '#be123c', '#57534e', '#111317'
+    ];
+
+    const BIOMES = {
+      munnar: {
+        label: 'LOCATION: MUNNAR WESTERN GHATS FOREST TRAIL • ACTIVE ROCK CRAWL',
+        skyTop: '#16324f',
+        skyBot: '#86efac',
+        fogColor: 0x3b5949,
+        fogDensity: 0.014,
+        groundColor: 0x293821,
+        trailColor: 0x4a3520,
+        rockColor: 0x57534e,
+        mountainColor: 0x1a301e,
+        treeType: 'forest',
+        foliageColor: 0x166534,
+        trunkColor: 0x451a03,
+        sunColor: 0xfffbeb,
+        sunIntensity: 2.0,
+        hemiSky: 0xa7f3d0,
+        hemiGround: 0x293821,
+        dustColor: 0x855836,
+        showGrid: false
+      },
+      moab: {
+        label: 'LOCATION: MOAB RED ROCK CANYON (UTAH) • SLICKROCK BOULDER CRAWL',
+        skyTop: '#1e40af',
+        skyBot: '#fdba74',
+        fogColor: 0x9a3412,
+        fogDensity: 0.013,
+        groundColor: 0x9a3412,
+        trailColor: 0x7c2d12,
+        rockColor: 0xb45309,
+        mountainColor: 0x7c2d12,
+        treeType: 'cactus',
+        foliageColor: 0x3f6212,
+        trunkColor: 0x3f6212,
+        sunColor: 0xffedd5,
+        sunIntensity: 2.2,
+        hemiSky: 0xfde68a,
+        hemiGround: 0x7c2d12,
+        dustColor: 0xd97706,
+        showGrid: false
+      },
+      ladakh: {
+        label: 'LOCATION: KHARDUNG LA HIMALAYAN SNOW PASS • GLACIER BOULDER TRAIL',
+        skyTop: '#0f172a',
+        skyBot: '#bae6fd',
+        fogColor: 0x94a3b8,
+        fogDensity: 0.014,
+        groundColor: 0xe2e8f0,
+        trailColor: 0x64748b,
+        rockColor: 0x475569,
+        mountainColor: 0xcbd5e1,
+        treeType: 'snowpine',
+        foliageColor: 0xcbd5e1,
+        trunkColor: 0x334155,
+        sunColor: 0xf0f9ff,
+        sunIntensity: 2.1,
+        hemiSky: 0xe0f2fe,
+        hemiGround: 0x64748b,
+        dustColor: 0xf8fafc,
+        showGrid: false
+      },
+      beach: {
+        label: 'LOCATION: COASTAL BEACH DUNES & TIDE ROCKS • SUNSET OVERLANDING',
+        skyTop: '#311042',
+        skyBot: '#fb923c',
+        fogColor: 0x7c2d12,
+        fogDensity: 0.012,
+        groundColor: 0xd97706,
+        trailColor: 0xb45309,
+        rockColor: 0x44403c,
+        mountainColor: 0x0369a1,
+        treeType: 'palm',
+        foliageColor: 0x15803d,
+        trunkColor: 0x78350f,
+        sunColor: 0xfdba74,
+        sunIntensity: 2.1,
+        hemiSky: 0xfed7aa,
+        hemiGround: 0x92400e,
+        dustColor: 0xfde68a,
+        showGrid: false
+      },
+      volcano: {
+        label: 'LOCATION: ICELAND VOLCANIC BASALT HIGHLANDS • LAVA CRATER TRAIL',
+        skyTop: '#090a0f',
+        skyBot: '#450a0a',
+        fogColor: 0x1c1917,
+        fogDensity: 0.016,
+        groundColor: 0x18181b,
+        trailColor: 0x09090b,
+        rockColor: 0x27272a,
+        mountainColor: 0x0f0f12,
+        treeType: 'deadwood',
+        foliageColor: 0xef4444,
+        trunkColor: 0x1c1917,
+        sunColor: 0xf97316,
+        sunIntensity: 1.7,
+        hemiSky: 0xfef08a,
+        hemiGround: 0x450a0a,
+        dustColor: 0xf97316,
+        showGrid: false
+      },
+      mars: {
+        label: 'LOCATION: JEZERO CRATER MARS EXPEDITION • LOW-GRAVITY ROCK CRAWL',
+        skyTop: '#2a0a04',
+        skyBot: '#c2410c',
+        fogColor: 0x431407,
+        fogDensity: 0.015,
+        groundColor: 0x7c2d12,
+        trailColor: 0x5c1f09,
+        rockColor: 0x9a3412,
+        mountainColor: 0x431407,
+        treeType: 'spires',
+        foliageColor: 0x9a3412,
+        trunkColor: 0x7c2d12,
+        sunColor: 0xfdba74,
+        sunIntensity: 1.85,
+        hemiSky: 0xfdba74,
+        hemiGround: 0x431407,
+        dustColor: 0xea580c,
+        showGrid: false
+      },
+      arctic: {
+        label: 'LOCATION: SVALBARD ARCTIC GLACIER NIGHT • AURORA ICE CRAWL',
+        skyTop: '#020617',
+        skyBot: '#0f2942',
+        fogColor: 0x081c2e,
+        fogDensity: 0.015,
+        groundColor: 0x1e3a5f,
+        trailColor: 0x0f172a,
+        rockColor: 0x64748b,
+        mountainColor: 0x1e293b,
+        treeType: 'snowpine',
+        foliageColor: 0x38bdf8,
+        trunkColor: 0x1e293b,
+        sunColor: 0x38bdf8,
+        sunIntensity: 1.6,
+        hemiSky: 0x00f0ff,
+        hemiGround: 0x0f172a,
+        dustColor: 0xbae6fd,
+        showGrid: false
+      },
+      cyber: {
+        label: 'LOCATION: NEON CYBER PROVING GROUND • TELEMETRY TEST TRACK',
+        skyTop: '#030712',
+        skyBot: '#0f172a',
+        fogColor: 0x060911,
+        fogDensity: 0.018,
+        groundColor: 0x090d16,
+        trailColor: 0x0f172a,
+        rockColor: 0x334155,
+        mountainColor: 0x0f172a,
+        treeType: 'pylons',
+        foliageColor: 0x00f0ff,
+        trunkColor: 0x1e293b,
+        sunColor: 0xf8fafc,
+        sunIntensity: 1.8,
+        hemiSky: 0x38bdf8,
+        hemiGround: 0x0f172a,
+        dustColor: 0x00f0ff,
+        showGrid: true
+      }
+    };
+
+    // ============================================================================
+    // 2. SYNTHESIZED WEB AUDIO ENGINE (V8 RUMBLE & SUSPENSION THUMP)
+    // ============================================================================
+    let audioCtx = null;
+    let engineOsc = null;
+    let engineGain = null;
+
+    function toggleAudio() {
+      state.audioEnabled = !state.audioEnabled;
+      const btn = document.getElementById('btnAudioToggle');
+      btn.innerHTML = state.audioEnabled ? '<span>🔊 SFX: ON</span>' : '<span>🔊 SFX: OFF</span>';
+      btn.classList.toggle('active', state.audioEnabled);
+
+      if (state.audioEnabled) {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContextClass();
+          engineOsc = audioCtx.createOscillator();
+          const subOsc = audioCtx.createOscillator();
+          const filter = audioCtx.createBiquadFilter();
+          engineGain = audioCtx.createGain();
+
+          engineOsc.type = 'sawtooth';
+          engineOsc.frequency.value = 46;
+          subOsc.type = 'triangle';
+          subOsc.frequency.value = 23;
+
+          filter.type = 'lowpass';
+          filter.frequency.value = 140;
+          engineGain.gain.value = 0.06;
+
+          engineOsc.connect(filter);
+          subOsc.connect(filter);
+          filter.connect(engineGain);
+          engineGain.connect(audioCtx.destination);
+
+          engineOsc.start();
+          subOsc.start();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (engineGain) engineGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.1);
+      } else if (engineGain && audioCtx) {
+        engineGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.1);
+      }
+    }
+
+    function playMechanicalClick(freq = 210) {
+      if (!state.audioEnabled || !audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 0.07);
+      g.gain.setValueAtTime(0.07, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.07);
+    }
+
+    // ============================================================================
+    // 3. THREE.JS SCENE, PMREM ENVIRONMENT MAP & PROCEDURAL PBR TEXTURE GENERATOR
+    // ============================================================================
+    const container = document.getElementById('canvasContainer');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x3b5949, 0.014);
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 260);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.22;
+    container.appendChild(renderer.domElement);
+
+    // Generate Real-Time Pre-Filtered Mipmapped Radiance Environment Map (PMREM)
+    // Gives automotive clearcoat paint, chrome, and glass true lifelike reflections!
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    let currentEnvRT = null;
+    function buildProceduralEnvMap(skyHex, groundHex, sunHex) {
+      const envScene = new THREE.Scene();
+      const skyGeo = new THREE.SphereGeometry(40, 24, 16);
+      const skyMat = new THREE.MeshBasicMaterial({ color: skyHex, side: THREE.BackSide });
+      envScene.add(new THREE.Mesh(skyGeo, skyMat));
+
+      // Ground hemisphere bounce
+      const gndGeo = new THREE.SphereGeometry(38, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+      const gndMat = new THREE.MeshBasicMaterial({ color: groundHex, side: THREE.BackSide });
+      envScene.add(new THREE.Mesh(gndGeo, gndMat));
+
+      // Overhead studio / sun light strips for realistic automotive body highlights
+      const stripGeo = new THREE.PlaneGeometry(28, 5);
+      const stripMat = new THREE.MeshBasicMaterial({ color: sunHex, side: THREE.DoubleSide });
+      const s1 = new THREE.Mesh(stripGeo, stripMat);
+      s1.position.set(0, 24, 10);
+      s1.rotation.x = Math.PI / 2.3;
+      const s2 = new THREE.Mesh(stripGeo, stripMat);
+      s2.position.set(-18, 16, -12);
+      s2.lookAt(0, 0, 0);
+      envScene.add(s1, s2);
+
+      const envRT = pmremGenerator.fromScene(envScene, 0.035);
+      if (currentEnvRT) currentEnvRT.dispose();
+      currentEnvRT = envRT;
+      scene.environment = envRT.texture;
+    }
+
+    // Generate High-Resolution Procedural PBR Textures (Tire Tread Bump, Trail Dirt, Carbon Weave)
+    function createProceduralTextures() {
+      // 1. Tire Tread & Sidewall Bump Map (256x256)
+      const tc = document.createElement('canvas');
+      tc.width = 256; tc.height = 256;
+      const tctx = tc.getContext('2d');
+      tctx.fillStyle = '#303030';
+      tctx.fillRect(0, 0, 256, 256);
+      tctx.fillStyle = '#e5e5e5';
+      for (let y = 0; y < 256; y += 16) {
+        tctx.fillRect(18, y + 2, 92, 10);
+        tctx.fillRect(146, y + 8, 92, 10);
+        tctx.fillRect(114, y + 4, 28, 9);
+      }
+      const tireBumpTex = new THREE.CanvasTexture(tc);
+      tireBumpTex.wrapS = THREE.RepeatWrapping;
+      tireBumpTex.wrapT = THREE.RepeatWrapping;
+      tireBumpTex.repeat.set(1, 6);
+
+      // 2. Seamlessly Scrolling Off-Road Trail Texture (512x512)
+      const dc = document.createElement('canvas');
+      dc.width = 512; dc.height = 512;
+      const dctx = dc.getContext('2d');
+      dctx.fillStyle = '#808080';
+      dctx.fillRect(0, 0, 512, 512);
+      // Tire rut tracks & gravel noise
+      for (let i = 0; i < 2400; i++) {
+        const v = 90 + Math.floor(Math.random() * 90);
+        dctx.fillStyle = `rgb(${v},${v},${v})`;
+        dctx.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 6, 3 + Math.random() * 8);
+      }
+      // Left & right tire rut grooves
+      dctx.fillStyle = 'rgba(40,40,40,0.35)';
+      dctx.fillRect(110, 0, 68, 512);
+      dctx.fillRect(334, 0, 68, 512);
+      const trailTex = new THREE.CanvasTexture(dc);
+      trailTex.wrapS = THREE.RepeatWrapping;
+      trailTex.wrapT = THREE.RepeatWrapping;
+      trailTex.repeat.set(1, 18);
+
+      return { tireBumpTex, trailTex };
+    }
+
+    const procTextures = createProceduralTextures();
+
+    // Smooth Orbit Camera Rig
+    const camRig = {
+      theta: 0.86,
+      phi: 1.20,
+      radius: 10.8,
+      target: new THREE.Vector3(0, 1.22, 0.12),
+      goalTheta: 0.86,
+      goalPhi: 1.20,
+      goalRadius: 10.8,
+      goalTarget: new THREE.Vector3(0, 1.22, 0.12),
+      isDragging: false,
+      prevX: 0,
+      prevY: 0
+    };
+
+    container.addEventListener('pointerdown', (e) => {
+      camRig.isDragging = true;
+      camRig.prevX = e.clientX;
+      camRig.prevY = e.clientY;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!camRig.isDragging) return;
+      const dx = e.clientX - camRig.prevX;
+      const dy = e.clientY - camRig.prevY;
+      camRig.prevX = e.clientX;
+      camRig.prevY = e.clientY;
+      camRig.goalTheta -= dx * 0.0075;
+      camRig.goalPhi = Math.max(0.24, Math.min(1.50, camRig.goalPhi - dy * 0.0065));
+    });
+
+    window.addEventListener('pointerup', () => {
+      camRig.isDragging = false;
+    });
+
+    window.addEventListener('pointercancel', () => {
+      camRig.isDragging = false;
+    });
+
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      camRig.goalRadius = Math.max(4.8, Math.min(22, camRig.goalRadius + e.deltaY * 0.006));
+    }, { passive: false });
+
+    const hemiLight = new THREE.HemisphereLight(0xa7f3d0, 0x293821, 0.85);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 2.0);
+    dirLight.position.set(14, 24, 14);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    const d = 9.5;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    dirLight.shadow.bias = -0.0005;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.65);
+    fillLight.position.set(-12, 8, -10);
+    scene.add(fillLight);
+
+    // ============================================================================
+    // 4. SHARED AUTOMOTIVE PBR MATERIALS (CLEARCOAT, ANODIZED ALLOY, TREAD BUMP)
+    // ============================================================================
+    const materials = {
+      body: new THREE.MeshPhysicalMaterial({
+        color: state.colors.body,
+        roughness: 0.16,
+        metalness: 0.55,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.08,
+        envMapIntensity: 1.45,
+        transparent: false,
+        opacity: 1.0
+      }),
+      armor: new THREE.MeshStandardMaterial({
+        color: state.colors.armor,
+        roughness: 0.52,
+        metalness: 0.42,
+        envMapIntensity: 0.9
+      }),
+      springs: new THREE.MeshStandardMaterial({
+        color: state.colors.springs,
+        emissive: state.colors.springs,
+        emissiveIntensity: 0.12,
+        roughness: 0.22,
+        metalness: 0.68,
+        envMapIntensity: 1.2
+      }),
+      rims: new THREE.MeshStandardMaterial({
+        color: state.colors.rims,
+        roughness: 0.22,
+        metalness: 0.88,
+        envMapIntensity: 1.4
+      }),
+      tireRubber: new THREE.MeshStandardMaterial({
+        color: 0x18191c,
+        roughness: 0.84,
+        metalness: 0.08,
+        bumpMap: procTextures.tireBumpTex,
+        bumpScale: 0.035
+      }),
+      chassisSteel: new THREE.MeshStandardMaterial({
+        color: 0x27272a,
+        roughness: 0.42,
+        metalness: 0.82
+      }),
+      chrome: new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.08,
+        metalness: 0.98,
+        envMapIntensity: 1.6
+      }),
+      brakeDisc: new THREE.MeshStandardMaterial({
+        color: 0xcbd5e1,
+        roughness: 0.24,
+        metalness: 0.9
+      }),
+      engineBlock: new THREE.MeshStandardMaterial({
+        color: 0x3f3f46,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.06,
+        roughness: 0.32,
+        metalness: 0.88
+      }),
+      leatherSeat: new THREE.MeshStandardMaterial({
+        color: 0x26211e,
+        roughness: 0.58,
+        metalness: 0.08
+      }),
+      glass: new THREE.MeshPhysicalMaterial({
+        color: 0x0f172a,
+        transparent: true,
+        opacity: 0.52,
+        roughness: 0.04,
+        metalness: 0.15,
+        clearcoat: 1.0,
+        envMapIntensity: 1.8
+      }),
+      headlampGlow: new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xfffbeb,
+        emissiveIntensity: 3.4,
+        roughness: 0.08
+      }),
+      amberMarker: new THREE.MeshStandardMaterial({
+        color: 0xfbbf24,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 2.5,
+        roughness: 0.15
+      }),
+      taillampGlow: new THREE.MeshStandardMaterial({
+        color: 0xfecdd3,
+        emissive: 0xef4444,
+        emissiveIntensity: 2.8,
+        roughness: 0.1
+      }),
+      jerryCanRed: new THREE.MeshStandardMaterial({
+        color: 0xdc2626,
+        roughness: 0.32,
+        metalness: 0.35
+      }),
+      recoveryOrange: new THREE.MeshStandardMaterial({
+        color: 0xea580c,
+        roughness: 0.38,
+        metalness: 0.18
+      }),
+      groundTerrain: new THREE.MeshStandardMaterial({
+        color: 0x293821,
+        roughness: 0.94,
+        metalness: 0.02
+      }),
+      trailDirt: new THREE.MeshStandardMaterial({
+        color: 0x5c4228,
+        map: procTextures.trailTex,
+        bumpMap: procTextures.trailTex,
+        bumpScale: 0.04,
+        roughness: 0.92,
+        metalness: 0.02
+      }),
+      rockStone: new THREE.MeshStandardMaterial({
+        color: 0x57534e,
+        roughness: 0.82,
+        metalness: 0.08,
+        flatShading: true
+      }),
+      mountainRock: new THREE.MeshStandardMaterial({
+        color: 0x1a301e,
+        roughness: 0.9,
+        metalness: 0.04,
+        flatShading: true
+      }),
+      treeFoliage: new THREE.MeshStandardMaterial({
+        color: 0x166534,
+        roughness: 0.85,
+        metalness: 0.05,
+        flatShading: true
+      }),
+      treeTrunk: new THREE.MeshStandardMaterial({
+        color: 0x451a03,
+        roughness: 0.9,
+        metalness: 0.02
+      })
+    };
+
+    function setAllMaterialsWireframe(enabled) {
+      Object.entries(materials).forEach(([k, m]) => {
+        if (m && !['groundTerrain', 'trailDirt', 'mountainRock'].includes(k)) {
+          m.wireframe = enabled;
+        }
+      });
+    }
+
+    // ============================================================================
+    // 5. TRUE-TO-LIFE SCULPTED 4X4 RUBICON 392 / DEFENDER OCTA 3D MODEL
+    // ============================================================================
+    const cruiserRoot = new THREE.Group();
+    scene.add(cruiserRoot);
+
+    const chassisGroup = new THREE.Group();
+    const bodyShellGroup = new THREE.Group();
+    const interiorGroup = new THREE.Group();
+    const engineGroup = new THREE.Group();
+    const roofRackGroup = new THREE.Group();
+    const stingerHoopGroup = new THREE.Group();
+    const hoodPivot = new THREE.Group();
+    const doorFLPivot = new THREE.Group();
+    const doorFRPivot = new THREE.Group();
+    const doorRLPivot = new THREE.Group();
+    const doorRRPivot = new THREE.Group();
+    const tailgatePivot = new THREE.Group();
+
+    const sprungMassGroup = new THREE.Group();
+    cruiserRoot.add(sprungMassGroup);
+
+    sprungMassGroup.add(
+      chassisGroup,
+      bodyShellGroup,
+      interiorGroup,
+      engineGroup,
+      roofRackGroup,
+      hoodPivot,
+      doorFLPivot,
+      doorFRPivot,
+      doorRLPivot,
+      doorRRPivot,
+      tailgatePivot
+    );
+
+    function makeMesh(geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.rotation.set(rx, ry, rz);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      return m;
+    }
+
+    function makeExtrudedProfile(pts2D, widthX, mat, bevel = 0.05) {
+      const shape = new THREE.Shape();
+      pts2D.forEach(([z, y], idx) => {
+        if (idx === 0) shape.moveTo(z, y);
+        else shape.lineTo(z, y);
+      });
+      shape.closePath();
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: widthX,
+        bevelEnabled: bevel > 0,
+        bevelThickness: bevel,
+        bevelSize: bevel,
+        bevelSegments: 5
+      });
+      geo.rotateY(-Math.PI / 2);
+      geo.translate(widthX / 2, 0, 0);
+      return makeMesh(geo, mat);
+    }
+
+    // --- 5A. HYDROFORMED LADDER CHASSIS, WARN WINCH BUMPER & MODULAR STINGER ---
+    (function buildChassisAndArmor() {
+      const railGeo = new THREE.BoxGeometry(0.11, 0.16, 4.60);
+      chassisGroup.add(makeMesh(railGeo, materials.chassisSteel, -0.50, 0.88, 0));
+      chassisGroup.add(makeMesh(railGeo, materials.chassisSteel, 0.50, 0.88, 0));
+
+      const crossGeo = new THREE.BoxGeometry(1.12, 0.10, 0.12);
+      [-2.12, -1.25, -0.25, 0.55, 1.35, 2.15].forEach((zPos) => {
+        chassisGroup.add(makeMesh(crossGeo, materials.chassisSteel, 0, 0.88, zPos));
+      });
+
+      // Heavy Rock Sliders & Dual Side Steps
+      [-1, 1].forEach((side) => {
+        chassisGroup.add(makeMesh(new THREE.CylinderGeometry(0.046, 0.046, 2.08, 18), materials.armor, side * 1.02, 0.87, -0.08, Math.PI / 2, 0, 0));
+        chassisGroup.add(makeMesh(new THREE.BoxGeometry(0.18, 0.04, 1.92), materials.armor, side * 0.93, 0.87, -0.08));
+      });
+
+      // Sculpted Steel Front Winch Bumper (Z = +2.38)
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(1.94, 0.22, 0.28), materials.armor, 0, 0.98, 2.38));
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(0.28, 0.18, 0.24), materials.armor, -0.96, 1.02, 2.32, 0, 0.25, 0.15));
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(0.28, 0.18, 0.24), materials.armor, 0.96, 1.02, 2.32, 0, -0.25, -0.15));
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(1.14, 0.05, 0.62), materials.chrome, 0, 0.78, 2.22, -0.42, 0, 0));
+
+      // Swappable Stinger Bullbar Hoop + Dual Amber Trail Fog Pods
+      stingerHoopGroup.add(makeMesh(new THREE.CylinderGeometry(0.038, 0.038, 0.98, 16), materials.armor, 0, 1.44, 2.48, 0, 0, Math.PI / 2));
+      stingerHoopGroup.add(makeMesh(new THREE.CylinderGeometry(0.038, 0.038, 0.50, 16), materials.armor, -0.46, 1.22, 2.45, -0.18, 0, 0.1));
+      stingerHoopGroup.add(makeMesh(new THREE.CylinderGeometry(0.038, 0.038, 0.50, 16), materials.armor, 0.46, 1.22, 2.45, -0.18, 0, -0.1));
+      stingerHoopGroup.add(makeMesh(new THREE.CylinderGeometry(0.065, 0.065, 0.07, 16), materials.amberMarker, -0.26, 1.15, 2.46, Math.PI / 2, 0, 0));
+      stingerHoopGroup.add(makeMesh(new THREE.CylinderGeometry(0.065, 0.065, 0.07, 16), materials.amberMarker, 0.26, 1.15, 2.46, Math.PI / 2, 0, 0));
+      chassisGroup.add(stingerHoopGroup);
+
+      // Warn Winch + Red Forged D-Ring Shackles
+      chassisGroup.add(makeMesh(new THREE.CylinderGeometry(0.088, 0.088, 0.36, 20), materials.engineBlock, 0, 1.10, 2.40, 0, 0, Math.PI / 2));
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(0.28, 0.09, 0.05), materials.chrome, 0, 1.02, 2.53));
+      [-0.52, 0.52].forEach((sx) => {
+        chassisGroup.add(makeMesh(new THREE.TorusGeometry(0.058, 0.02, 12, 20), materials.springs, sx, 0.96, 2.54, 0, Math.PI / 2, 0));
+      });
+
+      // Rear Bumper & Quad Exhaust Tips (Rubicon 392 style!)
+      chassisGroup.add(makeMesh(new THREE.BoxGeometry(1.94, 0.22, 0.26), materials.armor, 0, 0.96, -2.35));
+      [-0.64, -0.52, 0.52, 0.64].forEach((exX) => {
+        chassisGroup.add(makeMesh(new THREE.CylinderGeometry(0.038, 0.038, 0.35, 16), materials.chrome, exX, 0.82, -2.32, Math.PI / 2, 0, 0));
+      });
+    })();
+
+    // --- 5B. 392 HEMI V8 ENGINE BLOCK WITH ANIMATED PISTONS ---
+    let engineFanMesh = null;
+    const animatedPistons = [];
+    (function buildV8Engine() {
+      engineGroup.add(makeMesh(new THREE.BoxGeometry(0.62, 0.42, 0.72), materials.engineBlock, 0, 1.26, 1.52));
+      const headGeo = new THREE.BoxGeometry(0.26, 0.22, 0.68);
+      engineGroup.add(makeMesh(headGeo, materials.springs, -0.26, 1.44, 1.52, 0, 0, 0.55));
+      engineGroup.add(makeMesh(headGeo, materials.springs, 0.26, 1.44, 1.52, 0, 0, -0.55));
+
+      const pistonGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.18, 16);
+      [-0.22, -0.07, 0.07, 0.22].forEach((zOff, i) => {
+        const p = makeMesh(pistonGeo, materials.chrome, (i % 2 === 0 ? -0.14 : 0.14), 1.54, 1.52 + zOff);
+        engineGroup.add(p);
+        animatedPistons.push({ mesh: p, phase: i * 1.57 });
+      });
+
+      engineGroup.add(makeMesh(new THREE.BoxGeometry(0.95, 0.52, 0.08), materials.armor, 0, 1.36, 2.08));
+      engineFanMesh = new THREE.Group();
+      engineFanMesh.position.set(0, 1.34, 1.98);
+      for (let i = 0; i < 6; i++) {
+        engineFanMesh.add(makeMesh(new THREE.BoxGeometry(0.06, 0.38, 0.015), materials.chrome, 0, 0, 0, 0, 0, (i * Math.PI) / 3));
+      }
+      engineGroup.add(engineFanMesh);
+    })();
+
+    // --- 5C. SCULPTED AUTOMOTIVE BODY, 4 OPENING DOORS, FENDERS & 7-SLOT GRILLE ---
+    const frontSpotLights = [];
+    (function buildSculptedBodyAndFenders() {
+      // Sculpted Lower Body Tub with High-Clearance Wheel Wells
+      const lowerTubProfile = [
+        [-2.28, 1.06],
+        [-2.02, 1.06],
+        [-1.88, 1.40],
+        [-1.12, 1.40],
+        [-0.95, 0.96],
+        [ 0.92, 0.96],
+        [ 1.10, 1.40],
+        [ 1.90, 1.40],
+        [ 2.15, 1.08],
+        [ 2.22, 1.62],
+        [ 0.85, 1.66],
+        [-2.25, 1.66]
+      ];
+      // Sculpted Left & Right Body Side Panels (wheel cutouts & rocker sills)
+      [-0.84, 0.84].forEach((sideX) => {
+        const sideTub = makeExtrudedProfile(lowerTubProfile, 0.08, materials.body, 0.025);
+        sideTub.position.x = sideX;
+        bodyShellGroup.add(sideTub);
+      });
+
+      // Cowl panel connecting hood rear base to windshield base
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.72, 0.08, 0.22), materials.body, 0, 1.66, 0.77));
+
+      // Engine Firewall separating engine bay from cockpit
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.64, 0.58, 0.06), materials.armor, 0, 1.34, 0.85));
+
+      // Rear Cargo Floor
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.64, 0.06, 1.25), materials.armor, 0, 1.10, -1.62));
+
+      // Sculpted Modular Hardtop Roof with Rain Gutters & Sound-Bar Ribs
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.76, 0.08, 2.74), materials.armor, 0, 2.31, -0.82));
+      [-1.8, -1.3, -0.8, -0.3, 0.2].forEach((rz) => {
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.54, 0.03, 0.08), materials.armor, 0, 2.35, rz));
+      });
+
+      // Raked Front Windshield Frame, Flush Glass, Interior Rearview Mirror & Dual Wipers
+      const wsFrame = new THREE.Group();
+      wsFrame.position.set(0, 1.97, 0.68);
+      wsFrame.rotation.x = -0.42;
+      wsFrame.add(makeMesh(new THREE.BoxGeometry(1.72, 0.72, 0.06), materials.body, 0, 0, 0));
+      wsFrame.add(makeMesh(new THREE.BoxGeometry(1.54, 0.56, 0.08), materials.glass, 0, 0, 0));
+      wsFrame.add(makeMesh(new THREE.BoxGeometry(0.42, 0.025, 0.03), materials.armor, -0.32, -0.18, 0.05, 0, 0, 0.18));
+      wsFrame.add(makeMesh(new THREE.BoxGeometry(0.42, 0.025, 0.03), materials.armor, 0.22, -0.18, 0.05, 0, 0, 0.18));
+      bodyShellGroup.add(wsFrame);
+
+      // Rear Quarter Windows & B/C/D Pillars
+      [-0.86, 0.86].forEach((xPos) => {
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.09, 0.65, 0.12), materials.body, xPos, 1.98, -0.14)); // B-pillar
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.09, 0.65, 0.12), materials.body, xPos, 1.98, -1.04)); // C-pillar
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.09, 0.54, 0.82), materials.glass, xPos, 1.98, -1.58)); // Rear quarter glass
+      });
+
+      // High-Clearance Trapezoidal Fender Flares (Front & Rear)
+      const frontFlareProfile = [
+        [1.00, 1.18], [1.16, 1.48], [1.86, 1.48], [2.08, 1.24],
+        [1.98, 1.18], [1.82, 1.38], [1.22, 1.38], [1.08, 1.18]
+      ];
+      const rearFlareProfile = [
+        [-2.02, 1.16], [-1.84, 1.48], [-1.14, 1.48], [-0.96, 1.16],
+        [-1.06, 1.16], [-1.20, 1.38], [-1.78, 1.38], [-1.92, 1.16]
+      ];
+      [-0.96, 0.96].forEach((fx) => {
+        const ff = makeExtrudedProfile(frontFlareProfile, 0.25, materials.armor, 0.025);
+        ff.position.x = fx;
+        bodyShellGroup.add(ff);
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.22, 0.035, 0.08), materials.amberMarker, fx, 1.36, 2.02));
+
+        const rf = makeExtrudedProfile(rearFlareProfile, 0.25, materials.armor, 0.025);
+        rf.position.x = fx;
+        bodyShellGroup.add(rf);
+      });
+
+      // Iconic 7-Slot Front Grille & Halo LED Projector Headlamps (Z = +2.22)
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.74, 0.54, 0.09), materials.body, 0, 1.35, 2.21));
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(1.58, 0.42, 0.11), materials.armor, 0, 1.35, 2.22));
+      for (let slot = -3; slot <= 3; slot++) {
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.065, 0.34, 0.13), materials.chassisSteel, slot * 0.115, 1.35, 2.23));
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.08, 0.36, 0.12), materials.chrome, slot * 0.115, 1.35, 2.225));
+      }
+
+      [-0.60, 0.60].forEach((hx) => {
+        bodyShellGroup.add(makeMesh(new THREE.CylinderGeometry(0.138, 0.138, 0.08, 28), materials.chrome, hx, 1.37, 2.24, Math.PI / 2, 0, 0));
+        bodyShellGroup.add(makeMesh(new THREE.CylinderGeometry(0.112, 0.112, 0.09, 28), materials.headlampGlow, hx, 1.37, 2.25, Math.PI / 2, 0, 0));
+        bodyShellGroup.add(makeMesh(new THREE.TorusGeometry(0.125, 0.014, 12, 28), materials.headlampGlow, hx, 1.37, 2.26));
+
+        const spot = new THREE.SpotLight(0xfffbeb, 2.5, 26, Math.PI / 4.5, 0.45, 1.4);
+        spot.position.set(hx, 1.37, 2.3);
+        spot.target.position.set(hx * 1.2, 0.0, 11.5);
+        bodyShellGroup.add(spot);
+        bodyShellGroup.add(spot.target);
+        frontSpotLights.push(spot);
+      });
+
+      [-0.80, 0.80].forEach((tx) => {
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.16, 0.24, 0.08), materials.taillampGlow, tx, 1.38, -2.29));
+        bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.18, 0.03, 0.1), materials.armor, tx, 1.38, -2.30));
+      });
+
+      // Raised Safari Snorkel
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.10, 0.10, 0.65), materials.armor, 0.94, 1.56, 1.15));
+      bodyShellGroup.add(makeMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.88, 16), materials.armor, 0.94, 1.96, 0.72, -0.42, 0, 0));
+      bodyShellGroup.add(makeMesh(new THREE.BoxGeometry(0.14, 0.12, 0.18), materials.armor, 0.94, 2.36, 0.54));
+    })();
+
+    // --- 5D. 37" MUD-TERRAIN TIRES, BEADLOCK RIMS, SLOTTED DISCS & BREMBO CALIPERS ---
+    function createDetailedMudWheel() {
+      const wheelGroup = new THREE.Group();
+
+      wheelGroup.add(makeMesh(new THREE.CylinderGeometry(0.49, 0.49, 0.35, 36), materials.tireRubber, 0, 0, 0, 0, 0, Math.PI / 2));
+      const shoulderGeo = new THREE.TorusGeometry(0.40, 0.09, 16, 32);
+      wheelGroup.add(makeMesh(shoulderGeo, materials.tireRubber, -0.115, 0, 0, 0, Math.PI / 2, 0));
+      wheelGroup.add(makeMesh(shoulderGeo, materials.tireRubber, 0.115, 0, 0, 0, Math.PI / 2, 0));
+
+      const lugGeo = new THREE.BoxGeometry(0.37, 0.055, 0.09);
+      const sideBiterGeo = new THREE.BoxGeometry(0.41, 0.075, 0.045);
+      for (let i = 0; i < 22; i++) {
+        const angle = (i / 22) * Math.PI * 2;
+        const cy = Math.cos(angle);
+        const cz = Math.sin(angle);
+        wheelGroup.add(makeMesh(lugGeo, materials.tireRubber, (i % 2 === 0 ? 0.02 : -0.02), cy * 0.505, cz * 0.505, angle, 0, (i % 2 === 0 ? 0.08 : -0.08)));
+        if (i % 2 === 0) {
+          wheelGroup.add(makeMesh(sideBiterGeo, materials.tireRubber, 0, cy * 0.43, cz * 0.43, angle, 0, 0));
+        }
+      }
+
+      wheelGroup.add(makeMesh(new THREE.CylinderGeometry(0.28, 0.28, 0.33, 28), materials.rims, 0, 0, 0, 0, 0, Math.PI / 2));
+      const spokeGeo = new THREE.BoxGeometry(0.35, 0.052, 0.52);
+      for (let s = 0; s < 5; s++) {
+        wheelGroup.add(makeMesh(spokeGeo, materials.rims, 0, 0, 0, (s * Math.PI) / 5, 0, 0));
+      }
+      wheelGroup.add(makeMesh(new THREE.TorusGeometry(0.27, 0.024, 12, 28), materials.armor, -0.175, 0, 0, 0, Math.PI / 2, 0));
+      wheelGroup.add(makeMesh(new THREE.TorusGeometry(0.27, 0.024, 12, 28), materials.armor, 0.175, 0, 0, 0, Math.PI / 2, 0));
+      wheelGroup.add(makeMesh(new THREE.CylinderGeometry(0.09, 0.09, 0.40, 18), materials.armor, 0, 0, 0, 0, 0, Math.PI / 2));
+
+      // Ventilated Brake Rotor Disc
+      wheelGroup.add(makeMesh(new THREE.CylinderGeometry(0.21, 0.21, 0.04, 24), materials.brakeDisc, 0, 0, 0, 0, 0, Math.PI / 2));
+
+      return wheelGroup;
+    }
+
+    // --- 5E. CLAMSHELL POWER-DOME HOOD, 4 OPENING DOORS, INTERIOR & ROOF RACK ---
+    (function buildPanelsAndRoof() {
+      // Sculpted Clamshell Power-Dome Hood
+      hoodPivot.position.set(0, 1.65, 0.85);
+      hoodPivot.add(makeMesh(new THREE.BoxGeometry(1.70, 0.06, 1.34), materials.body, 0, 0.02, 0.67));
+      hoodPivot.add(makeMesh(new THREE.BoxGeometry(0.94, 0.085, 0.98), materials.body, 0, 0.065, 0.64));
+      hoodPivot.add(makeMesh(new THREE.BoxGeometry(0.24, 0.09, 0.44), materials.armor, -0.22, 0.07, 0.68));
+      hoodPivot.add(makeMesh(new THREE.BoxGeometry(0.24, 0.09, 0.44), materials.armor, 0.22, 0.07, 0.68));
+
+      // Front-Left & Front-Right Doors (FL, FR)
+      doorFLPivot.position.set(-0.88, 1.52, 0.68);
+      const doorFL = new THREE.Group();
+      doorFL.add(makeMesh(new THREE.BoxGeometry(0.08, 0.62, 0.78), materials.body, 0, -0.18, -0.39));
+      doorFL.add(makeMesh(new THREE.BoxGeometry(0.07, 0.56, 0.76), materials.body, 0, 0.40, -0.40));
+      doorFL.add(makeMesh(new THREE.BoxGeometry(0.09, 0.44, 0.64), materials.glass, 0, 0.40, -0.40));
+      doorFL.add(makeMesh(new THREE.BoxGeometry(0.12, 0.045, 0.15), materials.armor, -0.03, 0.04, -0.68));
+      doorFL.add(makeMesh(new THREE.BoxGeometry(0.22, 0.15, 0.09), materials.armor, -0.12, 0.22, -0.14));
+      doorFLPivot.add(doorFL);
+
+      doorFRPivot.position.set(0.88, 1.52, 0.68);
+      const doorFR = new THREE.Group();
+      doorFR.add(makeMesh(new THREE.BoxGeometry(0.08, 0.62, 0.78), materials.body, 0, -0.18, -0.39));
+      doorFR.add(makeMesh(new THREE.BoxGeometry(0.07, 0.56, 0.76), materials.body, 0, 0.40, -0.40));
+      doorFR.add(makeMesh(new THREE.BoxGeometry(0.09, 0.44, 0.64), materials.glass, 0, 0.40, -0.40));
+      doorFR.add(makeMesh(new THREE.BoxGeometry(0.12, 0.045, 0.15), materials.armor, 0.03, 0.04, -0.68));
+      doorFR.add(makeMesh(new THREE.BoxGeometry(0.22, 0.15, 0.09), materials.armor, 0.12, 0.22, -0.14));
+      doorFRPivot.add(doorFR);
+
+      // Rear-Left & Rear-Right Doors (RL, RR) so all 4 doors open!
+      doorRLPivot.position.set(-0.88, 1.52, -0.20);
+      const doorRL = new THREE.Group();
+      doorRL.add(makeMesh(new THREE.BoxGeometry(0.08, 0.62, 0.76), materials.body, 0, -0.18, -0.38));
+      doorRL.add(makeMesh(new THREE.BoxGeometry(0.07, 0.56, 0.74), materials.body, 0, 0.40, -0.38));
+      doorRL.add(makeMesh(new THREE.BoxGeometry(0.09, 0.44, 0.62), materials.glass, 0, 0.40, -0.38));
+      doorRL.add(makeMesh(new THREE.BoxGeometry(0.12, 0.045, 0.15), materials.armor, -0.03, 0.04, -0.64));
+      doorRLPivot.add(doorRL);
+
+      doorRRPivot.position.set(0.88, 1.52, -0.20);
+      const doorRR = new THREE.Group();
+      doorRR.add(makeMesh(new THREE.BoxGeometry(0.08, 0.62, 0.76), materials.body, 0, -0.18, -0.38));
+      doorRR.add(makeMesh(new THREE.BoxGeometry(0.07, 0.56, 0.74), materials.body, 0, 0.40, -0.38));
+      doorRR.add(makeMesh(new THREE.BoxGeometry(0.09, 0.44, 0.62), materials.glass, 0, 0.40, -0.38));
+      doorRR.add(makeMesh(new THREE.BoxGeometry(0.12, 0.045, 0.15), materials.armor, 0.03, 0.04, -0.64));
+      doorRRPivot.add(doorRR);
+
+      // Swing-Out Rear Tailgate + Full-Size 37" Spare Wheel
+      tailgatePivot.position.set(0.86, 1.52, -2.26);
+      const tgGroup = new THREE.Group();
+      tgGroup.add(makeMesh(new THREE.BoxGeometry(1.68, 0.60, 0.08), materials.body, -0.86, -0.16, 0));
+      tgGroup.add(makeMesh(new THREE.BoxGeometry(1.62, 0.54, 0.06), materials.glass, -0.86, 0.42, 0));
+      // Heavy-Duty Steel Tailgate Spare Tire Carrier Mount
+      tgGroup.add(makeMesh(new THREE.CylinderGeometry(0.12, 0.15, 0.18, 16), materials.armor, -0.86, -0.04, -0.10, Math.PI / 2, 0, 0));
+      tgGroup.add(makeMesh(new THREE.BoxGeometry(0.28, 0.28, 0.04), materials.armor, -0.86, -0.04, -0.03));
+
+      // Upright Vertically-Mounted 37" Mud-Terrain Spare Wheel
+      const spareTire = createDetailedMudWheel();
+      spareTire.rotation.set(0, Math.PI / 2, 0);
+      spareTire.position.set(-0.86, -0.04, -0.24);
+      spareTire.scale.setScalar(0.88);
+      tgGroup.add(spareTire);
+      tailgatePivot.add(tgGroup);
+
+      // Interior Seats & Cockpit
+      interiorGroup.add(makeMesh(new THREE.BoxGeometry(1.64, 0.08, 2.65), materials.chassisSteel, 0, 1.04, -0.6));
+      interiorGroup.add(makeMesh(new THREE.BoxGeometry(1.60, 0.34, 0.38), materials.armor, 0, 1.52, 0.56));
+      interiorGroup.add(makeMesh(new THREE.TorusGeometry(0.16, 0.024, 12, 24), materials.armor, -0.42, 1.66, 0.26, 0.55, 0, 0));
+      [[-0.42, 1.22, -0.05], [0.42, 1.22, -0.05], [-0.42, 1.26, -1.02], [0.42, 1.26, -1.02]].forEach(([sx, sy, sz]) => {
+        const seat = new THREE.Group();
+        seat.position.set(sx, sy, sz);
+        seat.add(makeMesh(new THREE.BoxGeometry(0.45, 0.12, 0.46), materials.leatherSeat, 0, 0, 0));
+        seat.add(makeMesh(new THREE.BoxGeometry(0.43, 0.56, 0.11), materials.leatherSeat, 0, 0.31, -0.19, -0.14, 0, 0));
+        seat.add(makeMesh(new THREE.BoxGeometry(0.22, 0.15, 0.09), materials.leatherSeat, 0, 0.65, -0.23));
+        interiorGroup.add(seat);
+      });
+
+      // Expedition Roof Rack, 6-Pod LED Light Bar, Jerry Cans & Traction Boards
+      const rackY = 2.44;
+      roofRackGroup.add(makeMesh(new THREE.CylinderGeometry(0.03, 0.03, 2.55, 14), materials.armor, -0.82, rackY, -0.82, Math.PI / 2, 0, 0));
+      roofRackGroup.add(makeMesh(new THREE.CylinderGeometry(0.03, 0.03, 2.55, 14), materials.armor, 0.82, rackY, -0.82, Math.PI / 2, 0, 0));
+      roofRackGroup.add(makeMesh(new THREE.CylinderGeometry(0.03, 0.03, 1.64, 14), materials.armor, 0, rackY, 0.45, 0, 0, Math.PI / 2));
+      roofRackGroup.add(makeMesh(new THREE.CylinderGeometry(0.03, 0.03, 1.64, 14), materials.armor, 0, rackY, -2.08, 0, 0, Math.PI / 2));
+
+      for (let i = 0; i < 6; i++) {
+        roofRackGroup.add(makeMesh(new THREE.BoxGeometry(1.62, 0.03, 0.06), materials.armor, 0, rackY - 0.03, 0.32 - i * 0.45));
+      }
+      for (let p = -2.5; p <= 2.5; p += 1.0) {
+        roofRackGroup.add(makeMesh(new THREE.CylinderGeometry(0.068, 0.068, 0.09, 18), materials.headlampGlow, p * 0.28, rackY + 0.06, 0.46, Math.PI / 2, 0, 0));
+      }
+      [-0.48, -0.14].forEach((xPos) => {
+        roofRackGroup.add(makeMesh(new THREE.BoxGeometry(0.26, 0.34, 0.42), materials.jerryCanRed, xPos, rackY + 0.16, -1.55));
+      });
+      roofRackGroup.add(makeMesh(new THREE.BoxGeometry(0.42, 0.06, 1.15), materials.recoveryOrange, 0.42, rackY + 0.05, -0.75));
+    })();
+
+    // ============================================================================
+    // 6. 4-LINK SOLID AXLES, FOX 3.0 COILOVERS, RESERVOIRS & BREMBO CALIPERS
+    // ============================================================================
+    function createHelicalCoilSpring() {
+      const points = [];
+      const turns = 7.5;
+      const numSamples = 100;
+      const radius = 0.088;
+      for (let i = 0; i <= numSamples; i++) {
+        const t = i / numSamples;
+        const angle = t * turns * Math.PI * 2;
+        points.push(new THREE.Vector3(Math.cos(angle) * radius, t * 0.52, Math.sin(angle) * radius));
+      }
+      const curve = new THREE.CatmullRomCurve3(points);
+      return makeMesh(new THREE.TubeGeometry(curve, 95, 0.022, 10, false), materials.springs);
+    }
+
+    function createLeafSpringPack() {
+      const pack = new THREE.Group();
+      [0.96, 0.76, 0.56, 0.36].forEach((len, idx) => {
+        pack.add(makeMesh(new THREE.BoxGeometry(0.08, 0.018, len), materials.chassisSteel, 0, -idx * 0.02, 0));
+      });
+      pack.add(makeMesh(new THREE.BoxGeometry(0.11, 0.12, 0.09), materials.springs, 0, -0.03, 0));
+      return pack;
+    }
+
+    const frontAxleGroup = new THREE.Group();
+    const rearAxleGroup = new THREE.Group();
+    cruiserRoot.add(frontAxleGroup, rearAxleGroup);
+
+    frontAxleGroup.position.set(0, 0.50, 1.50);
+    frontAxleGroup.add(makeMesh(new THREE.CylinderGeometry(0.06, 0.06, 1.90, 16), materials.chassisSteel, 0, 0, 0, 0, 0, Math.PI / 2));
+    frontAxleGroup.add(makeMesh(new THREE.SphereGeometry(0.165, 18, 18), materials.chassisSteel, 0.22, 0, 0));
+    frontAxleGroup.add(makeMesh(new THREE.CylinderGeometry(0.135, 0.135, 0.06, 12), materials.springs, 0.22, 0, 0.12, Math.PI / 2, 0, 0));
+    frontAxleGroup.add(makeMesh(new THREE.CylinderGeometry(0.024, 0.024, 1.74, 12), materials.chrome, 0, -0.04, 0.14, 0, 0, Math.PI / 2));
+
+    rearAxleGroup.position.set(0, 0.50, -1.48);
+    rearAxleGroup.add(makeMesh(new THREE.CylinderGeometry(0.06, 0.06, 1.90, 16), materials.chassisSteel, 0, 0, 0, 0, 0, Math.PI / 2));
+    rearAxleGroup.add(makeMesh(new THREE.SphereGeometry(0.165, 18, 18), materials.chassisSteel, -0.18, 0, 0));
+    rearAxleGroup.add(makeMesh(new THREE.CylinderGeometry(0.135, 0.135, 0.06, 12), materials.springs, -0.18, 0, -0.12, Math.PI / 2, 0, 0));
+
+    const wheelNodes = [
+      { id: 'FL', x: -1.04, z: 1.50, isFront: true, barId: 'barFL' },
+      { id: 'FR', x:  1.04, z: 1.50, isFront: true, barId: 'barFR' },
+      { id: 'RL', x: -1.04, z: -1.48, isFront: false, barId: 'barRL' },
+      { id: 'RR', x:  1.04, z: -1.48, isFront: false, barId: 'barRR' }
+    ].map((cfg) => {
+      const wheelPivot = new THREE.Group();
+      wheelPivot.position.set(cfg.x, 0.50, cfg.z);
+      const wheelMesh = createDetailedMudWheel();
+      // Non-rotating Brembo 6-Piston Brake Caliper mounted to knuckle!
+      const caliper = makeMesh(
+        new THREE.BoxGeometry(0.09, 0.14, 0.09),
+        materials.springs,
+        cfg.x > 0 ? -0.05 : 0.05,
+        0.08,
+        0.14
+      );
+      wheelPivot.add(wheelMesh, caliper);
+      cruiserRoot.add(wheelPivot);
+
+      const coilMesh = createHelicalCoilSpring();
+      const springX = cfg.x > 0 ? 0.74 : -0.74;
+      coilMesh.position.set(springX, 0.50, cfg.z);
+      cruiserRoot.add(coilMesh);
+
+      const shockPiston = makeMesh(new THREE.CylinderGeometry(0.025, 0.025, 0.52, 12), materials.chrome, springX, 0.74, cfg.z);
+      const shockBody = makeMesh(new THREE.CylinderGeometry(0.042, 0.042, 0.34, 12), materials.rims, springX, 0.90, cfg.z);
+      const reservoir = makeMesh(new THREE.CylinderGeometry(0.028, 0.028, 0.22, 12), materials.springs, springX + (cfg.x > 0 ? 0.06 : -0.06), 0.92, cfg.z + 0.06);
+
+      // 4-Link Tubular Trailing Control Arm connecting Frame to Axle!
+      const linkArm = makeMesh(new THREE.CylinderGeometry(0.022, 0.022, 0.92, 10), materials.chassisSteel, springX * 0.75, 0.65, cfg.z * 0.62, Math.PI / 2, 0, 0);
+      cruiserRoot.add(shockPiston, shockBody, reservoir, linkArm);
+
+      const leafPack = createLeafSpringPack();
+      leafPack.position.set(springX * 0.9, 0.60, cfg.z);
+      cruiserRoot.add(leafPack);
+
+      return {
+        ...cfg,
+        wheelPivot,
+        wheelMesh,
+        coilMesh,
+        shockPiston,
+        shockBody,
+        reservoir,
+        linkArm,
+        leafPack,
+        barEl: document.getElementById(cfg.barId),
+        currentLift: 0,
+        velLift: 0
+      };
+    });
+
+    // ============================================================================
+    // 7. LIVING 3D OFF-ROAD WORLD: CURVED WINDING TRAIL, ROCKS, TREES, MOUNTAINS & DUST
+    // ============================================================================
+    function getRoadCurveRaw(z, t) {
+      const s = z * 0.026 + t * 0.20;
+      return Math.sin(s) * 3.6 + Math.sin(s * 1.5 + 0.8) * 1.2;
+    }
+
+    function getCurvedRoadX(z, t) {
+      return getRoadCurveRaw(z, t) - getRoadCurveRaw(0, t);
+    }
+
+    const worldEnvGroup = new THREE.Group();
+    scene.add(worldEnvGroup);
+
+    const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), materials.groundTerrain);
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.y = -0.02;
+    groundPlane.receiveShadow = true;
+    worldEnvGroup.add(groundPlane);
+
+    // Realistic Curved & Cambered Mountain Ribbon Road
+    const trailWidth = 4.8;
+    const trailLength = 160;
+    const trailSegmentsX = 8;
+    const trailSegmentsZ = 128;
+    const trailGeo = new THREE.PlaneGeometry(trailWidth, trailLength, trailSegmentsX, trailSegmentsZ);
+    trailGeo.rotateX(-Math.PI / 2);
+
+    const trailBasePositions = new Float32Array(trailGeo.attributes.position.array);
+    const trailStrip = new THREE.Mesh(trailGeo, materials.trailDirt);
+    trailStrip.position.y = 0.008;
+    trailStrip.receiveShadow = true;
+    worldEnvGroup.add(trailStrip);
+
+    function updateCurvedTrail(terrainTime) {
+      const posAttr = trailGeo.attributes.position;
+      const arr = posAttr.array;
+      const count = posAttr.count;
+
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const baseX = trailBasePositions[i3];
+        const baseZ = trailBasePositions[i3 + 2];
+
+        const curveX = getCurvedRoadX(baseZ, terrainTime);
+        const camber = -((baseX / (trailWidth * 0.5)) ** 2) * 0.045 + 0.035;
+
+        arr[i3] = baseX + curveX;
+        arr[i3 + 1] = camber;
+        arr[i3 + 2] = baseZ;
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    const gridHelper = new THREE.GridHelper(40, 60, 0x00f0ff, 0x1e293b);
+    gridHelper.position.y = 0.012;
+    gridHelper.visible = false;
+    worldEnvGroup.add(gridHelper);
+
+    const mountainGeo = new THREE.ConeGeometry(13, 24, 6);
+    for (let m = 0; m < 16; m++) {
+      const ang = (m / 16) * Math.PI * 2;
+      const dist = 48 + (m % 3) * 10;
+      const hScale = 0.75 + ((m * 5) % 4) * 0.35;
+      const peak = makeMesh(
+        mountainGeo,
+        materials.mountainRock,
+        Math.cos(ang) * dist,
+        8 * hScale - 2,
+        Math.sin(ang) * dist,
+        0,
+        m * 0.8,
+        0
+      );
+      peak.scale.set(1.3 + (m % 2) * 0.5, hScale, 1.3);
+      worldEnvGroup.add(peak);
+    }
+
+    const boulders = [];
+    const boulderGeo = new THREE.DodecahedronGeometry(0.36, 1);
+    const numBoulders = 28;
+    const trackSpanZ = 28.0;
+    for (let i = 0; i < numBoulders; i++) {
+      const isLeftTrack = i % 2 === 0;
+      const trackX = isLeftTrack
+        ? -1.08 + (Math.sin(i * 4.1) * 0.12)
+        :  1.08 + (Math.cos(i * 3.3) * 0.12);
+      const zStart = -14.0 + (i / numBoulders) * trackSpanZ;
+      const scaleW = 0.78 + (i % 4) * 0.26;
+      const scaleH = 0.40 + ((i * 7) % 5) * 0.14;
+      const rock = makeMesh(boulderGeo, materials.rockStone, trackX, 0.04, zStart, i * 0.7, i * 1.3, 0);
+      rock.scale.set(scaleW, scaleH, scaleW * 0.92);
+      worldEnvGroup.add(rock);
+      boulders.push({
+        mesh: rock,
+        baseX: trackX,
+        trackLateralOffset: trackX,
+        baseScaleH: scaleH,
+        radius: 0.36 * scaleW,
+        z: zStart
+      });
+    }
+
+    const roadsideProps = [];
+    const foliageConeGeo = new THREE.ConeGeometry(0.95, 2.4, 7);
+    const trunkCylGeo = new THREE.CylinderGeometry(0.14, 0.2, 1.2, 8);
+    const sideBoulderGeo = new THREE.DodecahedronGeometry(0.75, 1);
+
+    const numProps = 44;
+    const propsSpanZ = 100.0;
+    for (let p = 0; p < numProps; p++) {
+      const side = p % 2 === 0 ? -1 : 1;
+      const xOffset = side * (3.6 + ((p * 3) % 5) * 1.4);
+      const zPos = -35.0 + (p / numProps) * propsSpanZ;
+
+      const propGroup = new THREE.Group();
+      propGroup.position.set(xOffset, 0, zPos);
+
+      const trunk = makeMesh(trunkCylGeo, materials.treeTrunk, 0, 0.6, 0);
+      const crown1 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 1.8, 0);
+      const crown2 = makeMesh(foliageConeGeo, materials.treeFoliage, 0, 2.7, 0);
+      crown2.scale.setScalar(0.72);
+      const baseRock = makeMesh(sideBoulderGeo, materials.rockStone, side * -0.5, 0.25, 0.4, p, p * 0.5, 0);
+      baseRock.scale.set(0.8, 0.5, 0.7);
+
+      propGroup.add(trunk, crown1, crown2, baseRock);
+      propGroup.scale.setScalar(0.85 + (p % 4) * 0.25);
+
+      worldEnvGroup.add(propGroup);
+      roadsideProps.push({ group: propGroup, trunk, crown1, crown2, baseOffset: xOffset, z: zPos });
+    }
+
+    // GPU-Friendly Tire Dust / Mud / Snow Spray Particles
+    const dustParticles = [];
+    const dustGeo = new THREE.DodecahedronGeometry(0.085, 0);
+    const dustMat = new THREE.MeshBasicMaterial({
+      color: 0x855836,
+      transparent: true,
+      opacity: 0.55
+    });
+    for (let d = 0; d < 40; d++) {
+      const mesh = new THREE.Mesh(dustGeo, dustMat);
+      scene.add(mesh);
+      dustParticles.push({
+        mesh,
+        wheelIdx: d % 4,
+        life: Math.random(),
+        speedZ: 2.6 + Math.random() * 2.0,
+        speedY: 0.65 + Math.random() * 0.75,
+        driftX: (Math.random() - 0.5) * 0.75
+      });
+    }
+
+    function applyBiomeEnvironment(biomeKey) {
+      const cfg = BIOMES[biomeKey] || BIOMES.munnar;
+      state.biome = biomeKey;
+
+      document.body.style.background = `linear-gradient(180deg, ${cfg.skyTop} 0%, ${cfg.skyBot} 56%, #070b12 100%)`;
+      document.getElementById('statusReadout').textContent = cfg.label;
+
+      scene.fog.color.setHex(cfg.fogColor);
+      scene.fog.density = cfg.fogDensity;
+
+      materials.groundTerrain.color.setHex(cfg.groundColor);
+      materials.trailDirt.color.setHex(cfg.trailColor);
+      materials.rockStone.color.setHex(cfg.rockColor);
+      materials.mountainRock.color.setHex(cfg.mountainColor);
+      materials.treeFoliage.color.setHex(cfg.foliageColor);
+      materials.treeTrunk.color.setHex(cfg.trunkColor);
+      dustMat.color.setHex(cfg.dustColor);
+
+      dirLight.color.setHex(cfg.sunColor);
+      dirLight.intensity = cfg.sunIntensity;
+      hemiLight.color.setHex(cfg.hemiSky);
+      hemiLight.groundColor.setHex(cfg.hemiGround);
+      gridHelper.visible = cfg.showGrid;
+
+      // Rebuild PMREM Environment Map so vehicle paint reflects the new biome sky & ground!
+      buildProceduralEnvMap(cfg.hemiSky, cfg.groundColor, cfg.sunColor);
+
+      roadsideProps.forEach((rp) => {
+        if (cfg.treeType === 'cactus') {
+          rp.crown1.scale.set(0.28, 1.1, 0.28);
+          rp.crown2.visible = false;
+        } else if (cfg.treeType === 'spires' || cfg.treeType === 'deadwood') {
+          rp.crown1.scale.set(0.45, 1.3, 0.45);
+          rp.crown2.visible = false;
+        } else {
+          rp.crown1.scale.set(1, 1, 1);
+          rp.crown2.visible = true;
+        }
+      });
+    }
+
+    function sampleRockHeightAt(wx, wz) {
+      if (!state.driveOnRocks) return 0;
+      let maxLift = 0;
+
+      const t = state.anim.terrainTime;
+      const wave1 = Math.sin(t * 2.2 + wz * 1.1 + (wx > 0 ? 1.4 : 0.0)) * 0.068;
+      const wave2 = Math.cos(t * 3.5 - wz * 1.7 + (wx > 0 ? 0.0 : 2.1)) * 0.048;
+      const baseUndulation = Math.max(0, (wave1 + wave2) * state.rockHeightScale);
+
+      for (let i = 0; i < boulders.length; i++) {
+        const b = boulders[i];
+        const dx = wx - b.baseX;
+        const dz = wz - b.z;
+        const distSq = dx * dx + dz * dz;
+        const effectiveR = b.radius + 0.30;
+        if (distSq < effectiveR * effectiveR) {
+          const dist = Math.sqrt(distSq);
+          const dome = Math.cos((dist / effectiveR) * (Math.PI / 2));
+          const h = dome * b.baseScaleH * 0.56 * state.rockHeightScale;
+          if (h > maxLift) maxLift = h;
+        }
+      }
+      return Math.min(0.48, Math.max(baseUndulation, maxLift));
+    }
+
+    // ============================================================================
+    // 8. 3D AERODYNAMIC CFD WIND-TUNNEL STREAMLINES
+    // ============================================================================
+    const windTunnelGroup = new THREE.Group();
+    windTunnelGroup.visible = false;
+    scene.add(windTunnelGroup);
+
+    const aeroRibbons = [];
+    for (let r = 0; r < 14; r++) {
+      const laneX = -1.15 + (r / 13) * 2.3;
+      const baseHeight = 0.55 + (r % 3) * 0.52;
+      const pts = [];
+      for (let s = 0; s <= 36; s++) {
+        pts.push(new THREE.Vector3(laneX, baseHeight, 4.2 - (s / 36) * 8.4));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      const mat = new THREE.LineBasicMaterial({
+        color: r % 2 === 0 ? 0x00f0ff : 0x10b981,
+        transparent: true,
+        opacity: 0.65
+      });
+      const line = new THREE.Line(geo, mat);
+      windTunnelGroup.add(line);
+      aeroRibbons.push({ line, geo, laneX, baseHeight, phase: r * 0.55 });
+    }
+
+    function updateAeroStreamlines(elapsed) {
+      windTunnelGroup.visible = state.windTunnel;
+      if (!state.windTunnel) return;
+
+      const bodyLift = sprungMassGroup.position.y;
+      const hoodPenalty = state.anim.hood * 0.55;
+
+      aeroRibbons.forEach((rib) => {
+        const posAttr = rib.geo.attributes.position;
+        const insideWidth = Math.abs(rib.laneX) < 1.02;
+
+        for (let s = 0; s <= 36; s++) {
+          const z = 4.2 - (s / 36) * 8.4;
+          let y = rib.baseHeight;
+          let x = rib.laneX;
+
+          if (insideWidth && z < 2.55 && z > -2.55) {
+            const carProfile = z > 0.7 ? 1.72 + hoodPenalty : (z > -2.25 ? 2.62 : 1.85);
+            const targetH = carProfile + bodyLift;
+            if (y < targetH) {
+              const envelope = Math.sin(((2.55 - z) / 5.1) * Math.PI);
+              y += (targetH - y + 0.25) * envelope;
+            }
+          }
+          const wakeWave = z < -2.1 ? Math.sin(elapsed * 9 + z * 3.5 + rib.phase) * 0.14 : Math.sin(elapsed * 5 + z * 1.5 + rib.phase) * 0.03;
+          posAttr.setXYZ(s, x + wakeWave * 0.35, y + wakeWave, z);
+        }
+        posAttr.needsUpdate = true;
+      });
+    }
+
+    // ============================================================================
+    // 9. REAL-TIME 60-FPS 4-CHANNEL SUSPENSION OSCILLOSCOPE GRAPH
+    // ============================================================================
+    const oscCanvas = document.getElementById('oscilloscopeCanvas');
+    const oscCtx = oscCanvas.getContext('2d');
+    const historyLength = 85;
+    const waveHistory = {
+      FL: new Array(historyLength).fill(0),
+      FR: new Array(historyLength).fill(0),
+      RL: new Array(historyLength).fill(0),
+      RR: new Array(historyLength).fill(0)
+    };
+
+    function updateOscilloscope(fl, fr, rl, rr) {
+      waveHistory.FL.push(fl); waveHistory.FL.shift();
+      waveHistory.FR.push(fr); waveHistory.FR.shift();
+      waveHistory.RL.push(rl); waveHistory.RL.shift();
+      waveHistory.RR.push(rr); waveHistory.RR.shift();
+
+      const w = oscCanvas.width;
+      const h = oscCanvas.height;
+      oscCtx.clearRect(0, 0, w, h);
+
+      oscCtx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+      oscCtx.lineWidth = 1;
+      [14, 29, 44].forEach((gy) => {
+        oscCtx.beginPath(); oscCtx.moveTo(0, gy); oscCtx.lineTo(w, gy); oscCtx.stroke();
+      });
+
+      const channels = [
+        { key: 'FL', color: '#00f0ff', base: 14 },
+        { key: 'FR', color: '#10b981', base: 26 },
+        { key: 'RL', color: '#f59e0b', base: 39 },
+        { key: 'RR', color: '#f43f5e', base: 52 }
+      ];
+
+      channels.forEach((ch) => {
+        const arr = waveHistory[ch.key];
+        oscCtx.strokeStyle = ch.color;
+        oscCtx.lineWidth = 1.6;
+        oscCtx.beginPath();
+        for (let i = 0; i < arr.length; i++) {
+          const x = (i / (arr.length - 1)) * w;
+          const y = ch.base - arr[i] * 32;
+          if (i === 0) oscCtx.moveTo(x, y);
+          else oscCtx.lineTo(x, y);
+        }
+        oscCtx.stroke();
+      });
+    }
+
+    // ============================================================================
+    // 10. ZERO-ALLOCATION 3D-TO-2D HOLOGRAPHIC CALLOUT PINS & THUMBNAILS
+    // ============================================================================
+    const tempProjVec = new THREE.Vector3();
+    const calloutAnchors = [
+      { id: 'callout-1', worldPos: new THREE.Vector3(0.0, 2.50, 0.42), offset: { x: -205, y: -50 } },
+      { id: 'callout-2', worldPos: new THREE.Vector3(0.15, 1.38, 2.22), offset: { x: -215, y: 38 } },
+      { id: 'callout-3', worldPos: new THREE.Vector3(-0.88, 1.75, -0.35), offset: { x: -215, y: 5 } },
+      { id: 'callout-4', worldPos: new THREE.Vector3(0.95, 0.58, 1.50), offset: { x: 55, y: 42 } }
+    ];
+
+    const leaderLinesGroup = document.getElementById('leaderLinesGroup');
+
+    function updateCalloutsOverlay() {
+      return; // Disabled callout annotations
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      let svgMarkup = '';
+
+      for (let i = 0; i < calloutAnchors.length; i++) {
+        const c = calloutAnchors[i];
+        const el = document.getElementById(c.id);
+        if (!el) continue;
+
+        tempProjVec.copy(c.worldPos).applyMatrix4(sprungMassGroup.matrixWorld).project(camera);
+
+        if (tempProjVec.z > 1) {
+          el.style.opacity = '0';
+          continue;
+        }
+
+        const sx = (tempProjVec.x * 0.5 + 0.5) * w;
+        const sy = (-tempProjVec.y * 0.5 + 0.5) * h;
+
+        const labelX = Math.max(16, Math.min(w - 490, sx + c.offset.x));
+        const labelY = Math.max(105, Math.min(h - 95, sy + c.offset.y));
+
+        el.style.left = `${labelX}px`;
+        el.style.top = `${labelY}px`;
+        el.style.opacity = '1';
+
+        const anchorEndX = c.offset.x < 0 ? labelX + el.offsetWidth : labelX;
+        const anchorEndY = labelY + 14;
+
+        svgMarkup += `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="3.5" fill="#00f0ff" /><line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${anchorEndX.toFixed(1)}" y2="${anchorEndY.toFixed(1)}" stroke="url(#cyberGrad)" stroke-width="1.3" stroke-dasharray="3 2" />`;
+      }
+
+      leaderLinesGroup.innerHTML = svgMarkup;
+    }
+
+    function renderMaterialThumbnails() {
+      const c1 = document.getElementById('matThumbBody').getContext('2d');
+      c1.fillStyle = state.colors.body;
+      c1.fillRect(0, 0, 60, 36);
+
+      const c2 = document.getElementById('matThumbSpring').getContext('2d');
+      c2.fillStyle = '#090d16';
+      c2.fillRect(0, 0, 60, 36);
+      c2.strokeStyle = state.colors.springs;
+      c2.lineWidth = 4;
+      for (let y = 7; y <= 29; y += 8) {
+        c2.beginPath(); c2.moveTo(12, y); c2.lineTo(48, y + 4); c2.stroke();
+      }
+
+      const c3 = document.getElementById('matThumbCage').getContext('2d');
+      c3.fillStyle = state.colors.armor;
+      c3.fillRect(0, 0, 60, 36);
+      c3.fillStyle = '#f59e0b';
+      c3.fillRect(18, 9, 24, 18);
+
+      const c4 = document.getElementById('matThumbTire').getContext('2d');
+      c4.fillStyle = '#111827';
+      c4.fillRect(0, 0, 60, 36);
+      c4.fillStyle = state.colors.rims;
+      c4.beginPath(); c4.arc(30, 18, 11, 0, Math.PI * 2); c4.fill();
+    }
+
+    // ============================================================================
+    // 11. INSTANTANEOUS ZERO-LATENCY UI SYNCHRONIZATION HANDLERS
+    // ============================================================================
+    function buildColorPaletteUI() {
+      const grid = document.getElementById('colorPaletteGrid');
+      grid.innerHTML = '';
+      paletteSwatches.forEach((hex) => {
+        const btn = document.createElement('button');
+        btn.className = 'swatch-dot';
+        btn.style.backgroundColor = hex;
+        if (state.colors[state.activePartTab].toLowerCase() === hex.toLowerCase()) {
+          btn.classList.add('selected');
+        }
+        btn.addEventListener('click', () => {
+          state.colors[state.activePartTab] = hex;
+          materials[state.activePartTab].color.set(hex);
+          if (state.activePartTab === 'springs') {
+            materials.springs.emissive.set(hex);
+          }
+          playMechanicalClick(260);
+          buildColorPaletteUI();
+          renderMaterialThumbnails();
+        });
+        grid.appendChild(btn);
+      });
+    }
+
+    // Instant Paint Finish Selector (Gloss Clearcoat / Satin Matte / Liquid Chrome)
+    document.querySelectorAll('.finish-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.finish-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const finish = btn.getAttribute('data-finish');
+        state.paintFinish = finish;
+        if (finish === 'gloss') {
+          materials.body.roughness = 0.14;
+          materials.body.metalness = 0.55;
+          materials.body.clearcoat = 1.0;
+        } else if (finish === 'matte') {
+          materials.body.roughness = 0.58;
+          materials.body.metalness = 0.25;
+          materials.body.clearcoat = 0.08;
+        } else if (finish === 'chrome') {
+          materials.body.roughness = 0.06;
+          materials.body.metalness = 0.96;
+          materials.body.clearcoat = 1.0;
+        }
+        materials.body.needsUpdate = true;
+        playMechanicalClick(275);
+      });
+    });
+
+    // Instant Modular Part Swappers (Bumper & Expedition Roof Rack)
+    document.getElementById('btnSwapBumper').addEventListener('click', function () {
+      state.stingerBumper = !state.stingerBumper;
+      stingerHoopGroup.visible = state.stingerBumper;
+      this.textContent = state.stingerBumper ? 'BUMPER: STINGER' : 'BUMPER: STUBBY';
+      this.classList.toggle('active', state.stingerBumper);
+      playMechanicalClick(230);
+    });
+
+    document.getElementById('btnSwapRack').addEventListener('click', function () {
+      state.expeditionRack = !state.expeditionRack;
+      roofRackGroup.visible = state.expeditionRack;
+      this.textContent = state.expeditionRack ? 'RACK: EXPEDITION' : 'RACK: SLICKTOP';
+      this.classList.toggle('active', state.expeditionRack);
+      playMechanicalClick(240);
+    });
+
+    // Instant Suspension Lift Kit Slider (+0.0" to +6.0")
+    document.getElementById('sliderLiftKit').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.liftKitOffset = (val / 60) * 0.26;
+      document.getElementById('liftKitVal').textContent = `+${(val / 10).toFixed(1)} INCH`;
+    });
+
+    document.querySelectorAll('.part-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.part-tab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.activePartTab = tab.getAttribute('data-part');
+        playMechanicalClick(210);
+        buildColorPaletteUI();
+      });
+    });
+
+    document.getElementById('btnResetColors').addEventListener('click', () => {
+      Object.assign(state.colors, defaultColors);
+      Object.keys(defaultColors).forEach((k) => materials[k].color.set(defaultColors[k]));
+      materials.springs.emissive.set(defaultColors.springs);
+      playMechanicalClick(160);
+      buildColorPaletteUI();
+      renderMaterialThumbnails();
+    });
+
+    document.querySelectorAll('.biome-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.biome-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const biome = btn.getAttribute('data-biome');
+        playMechanicalClick(280);
+        applyBiomeEnvironment(biome);
+      });
+    });
+
+    document.getElementById('btnDriveRocks').addEventListener('click', function () {
+      state.driveOnRocks = !state.driveOnRocks;
+      this.classList.toggle('active', state.driveOnRocks);
+      document.getElementById('driveBtnLabel').textContent = state.driveOnRocks
+        ? 'TERRAIN CRAWL: ON'
+        : 'TERRAIN CRAWL: PAUSED';
+      playMechanicalClick(150);
+    });
+
+    document.getElementById('btnHydraulicJump').addEventListener('click', () => {
+      state.jumpVelocity = 4.6;
+      playMechanicalClick(340);
+    });
+
+    document.getElementById('btnWindTunnel').addEventListener('click', function () {
+      state.windTunnel = !state.windTunnel;
+      this.classList.toggle('active', state.windTunnel);
+      playMechanicalClick(240);
+    });
+
+    document.getElementById('btnXrayScanner').addEventListener('click', function () {
+      state.xrayMode = !state.xrayMode;
+      this.classList.toggle('active', state.xrayMode);
+      materials.body.transparent = state.xrayMode;
+      materials.body.opacity = state.xrayMode ? 0.24 : 1.0;
+      materials.engineBlock.emissiveIntensity = state.xrayMode ? 0.85 : 0.08;
+      materials.springs.emissiveIntensity = state.xrayMode ? 0.9 : 0.15;
+      playMechanicalClick(300);
+    });
+
+    document.getElementById('btnOpenDoors').addEventListener('click', function () {
+      state.doorsOpen = !state.doorsOpen;
+      this.classList.toggle('active', state.doorsOpen);
+      playMechanicalClick(170);
+    });
+
+    document.getElementById('btnOpenHood').addEventListener('click', function () {
+      state.hoodOpen = !state.hoodOpen;
+      this.classList.toggle('active', state.hoodOpen);
+      playMechanicalClick(180);
+    });
+
+    document.getElementById('btnRotateModel').addEventListener('click', function () {
+      state.rotateModel = !state.rotateModel;
+      this.classList.toggle('active', state.rotateModel);
+      playMechanicalClick(195);
+    });
+
+    document.getElementById('btnWireframe').addEventListener('click', function () {
+      state.wireframe = !state.wireframe;
+      this.classList.toggle('active', state.wireframe);
+      setAllMaterialsWireframe(state.wireframe);
+      playMechanicalClick(225);
+    });
+
+    document.getElementById('btnLights').addEventListener('click', function () {
+      state.lightsOn = !state.lightsOn;
+      this.classList.toggle('active', state.lightsOn);
+      materials.headlampGlow.emissiveIntensity = state.lightsOn ? 3.4 : 0.08;
+      materials.taillampGlow.emissiveIntensity = state.lightsOn ? 2.8 : 0.08;
+      frontSpotLights.forEach((s) => (s.intensity = state.lightsOn ? 2.5 : 0));
+      playMechanicalClick(250);
+    });
+
+    document.getElementById('btnExploded').addEventListener('click', function () {
+      state.explodedView = !state.explodedView;
+      this.classList.toggle('active', state.explodedView);
+      playMechanicalClick(135);
+    });
+
+    document.getElementById('btnAudioToggle').addEventListener('click', toggleAudio);
+
+    document.getElementById('sliderRockHeight').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.rockHeightScale = val / 100;
+      document.getElementById('rockHeightVal').textContent = `${val}%`;
+    });
+
+    document.getElementById('sliderCrawlSpeed').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.crawlSpeed = val / 10;
+      document.getElementById('crawlSpeedVal').textContent = `${state.crawlSpeed.toFixed(1)}x`;
+    });
+
+    document.getElementById('sliderSteerAngle').addEventListener('input', (e) => {
+      state.steerAngleDeg = parseInt(e.target.value, 10);
+      document.getElementById('steerAngleVal').textContent = `${state.steerAngleDeg}°`;
+    });
+
+    function setCameraViewPreset(mode) {
+      document.querySelectorAll('.cam-btn').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-cam') === mode);
+      });
+      state.rotateModel = false;
+      document.getElementById('btnRotateModel').classList.remove('active');
+
+      if (mode === 'iso') {
+        camRig.goalTheta = 0.86; camRig.goalPhi = 1.20; camRig.goalRadius = 10.8;
+        camRig.goalTarget.set(0, 1.22, 0.12);
+      } else if (mode === 'wheel') {
+        camRig.goalTheta = 1.15; camRig.goalPhi = 1.44; camRig.goalRadius = 6.0;
+        camRig.goalTarget.set(0.65, 0.78, 1.25);
+      } else if (mode === 'side') {
+        camRig.goalTheta = Math.PI / 2; camRig.goalPhi = 1.38; camRig.goalRadius = 11.4;
+        camRig.goalTarget.set(0, 1.20, 0);
+      } else if (mode === 'front') {
+        camRig.goalTheta = 0.25; camRig.goalPhi = 1.34; camRig.goalRadius = 10.2;
+        camRig.goalTarget.set(0, 1.15, 0.4);
+      } else if (mode === 'rear') {
+        camRig.goalTheta = Math.PI - 0.25; camRig.goalPhi = 1.34; camRig.goalRadius = 10.6;
+        camRig.goalTarget.set(0, 1.18, -0.3);
+      }
+      playMechanicalClick(205);
+    }
+
+    document.querySelectorAll('[data-cam]').forEach((el) => {
+      el.addEventListener('click', () => setCameraViewPreset(el.getAttribute('data-cam')));
+    });
+
+    document.querySelectorAll('.holo-tag').forEach((marker) => {
+      marker.addEventListener('click', () => {
+        const id = marker.getAttribute('data-callout');
+        playMechanicalClick(235);
+        if (id === '1') {
+          camRig.goalTheta = 0.55; camRig.goalPhi = 0.92; camRig.goalRadius = 9.2;
+        } else if (id === '2') {
+          state.hoodOpen = true;
+          document.getElementById('btnOpenHood').classList.add('active');
+          camRig.goalTheta = 0.35; camRig.goalPhi = 1.08; camRig.goalRadius = 8.6;
+        } else if (id === '3') {
+          state.doorsOpen = true;
+          document.getElementById('btnOpenDoors').classList.add('active');
+          camRig.goalTheta = -1.25; camRig.goalPhi = 1.2; camRig.goalRadius = 9.4;
+        } else if (id === '4') {
+          setCameraViewPreset('wheel');
+        }
+      });
+    });
+
+    document.querySelectorAll('.mat-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const focus = card.getAttribute('data-focus');
+        playMechanicalClick(215);
+        if (focus === 'body') setCameraViewPreset('iso');
+        else if (focus === 'suspension') setCameraViewPreset('wheel');
+        else if (focus === 'engine') {
+          state.hoodOpen = true;
+          document.getElementById('btnOpenHood').classList.add('active');
+          camRig.goalTheta = 0.25; camRig.goalPhi = 1.05; camRig.goalRadius = 8.6;
+        } else if (focus === 'wheels') setCameraViewPreset('wheel');
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        state.jumpVelocity = 4.6;
+      } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        state.steerAngleDeg = Math.max(-32, state.steerAngleDeg - 6);
+        document.getElementById('sliderSteerAngle').value = state.steerAngleDeg;
+        document.getElementById('steerAngleVal').textContent = `${state.steerAngleDeg}°`;
+      } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        state.steerAngleDeg = Math.min(32, state.steerAngleDeg + 6);
+        document.getElementById('sliderSteerAngle').value = state.steerAngleDeg;
+        document.getElementById('steerAngleVal').textContent = `${state.steerAngleDeg}°`;
+      }
+    });
+
+    // ============================================================================
+    // 12. 60-FPS PERFORMANCE-OPTIMIZED RENDER & PHYSICS LOOP
+    // ============================================================================
+    const clock = new THREE.Clock();
+    let frameCounter = 0;
+    let fpsAccumTime = 0;
+    const fpsBadgeEl = document.getElementById('fpsBadge');
+    const pitchRollReadoutEl = document.getElementById('pitchRollReadout');
+    const speedReadoutEl = document.getElementById('speedReadout');
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const rawDt = clock.getDelta();
+      const dt = Math.min(rawDt, 0.045);
+      const elapsed = clock.getElapsedTime();
+
+      // Live FPS Counter
+      frameCounter++;
+      fpsAccumTime += rawDt;
+      if (fpsAccumTime >= 0.5) {
+        const currentFps = Math.min(60, Math.round(frameCounter / fpsAccumTime));
+        fpsBadgeEl.textContent = `${currentFps} FPS • PMREM PBR`;
+        frameCounter = 0;
+        fpsAccumTime = 0;
+      }
+
+      const lerpFactor = Math.min(1, dt * 7.5);
+      state.anim.doors += ((state.doorsOpen ? 1 : 0) - state.anim.doors) * lerpFactor;
+      state.anim.hood += ((state.hoodOpen ? 1 : 0) - state.anim.hood) * lerpFactor;
+      state.anim.exploded += ((state.explodedView ? 1 : 0) - state.anim.exploded) * lerpFactor;
+
+      const ex = state.anim.exploded;
+
+      hoodPivot.rotation.x = -state.anim.hood * 0.78;
+      doorFLPivot.rotation.y = state.anim.doors * 1.08;
+      doorFRPivot.rotation.y = -state.anim.doors * 1.08;
+      doorRLPivot.rotation.y = state.anim.doors * 0.96;
+      doorRRPivot.rotation.y = -state.anim.doors * 0.96;
+      tailgatePivot.rotation.y = -state.anim.doors * 1.15;
+
+      roofRackGroup.position.y = ex * 1.35;
+      bodyShellGroup.position.y = ex * 0.55;
+      hoodPivot.position.set(0, 1.65 + ex * 0.85, 0.85 + ex * 0.35);
+      doorFLPivot.position.set(-0.88 - ex * 0.85, 1.52 + ex * 0.45, 0.68);
+      doorFRPivot.position.set(0.88 + ex * 0.85, 1.52 + ex * 0.45, 0.68);
+      doorRLPivot.position.set(-0.88 - ex * 0.85, 1.52 + ex * 0.45, -0.20);
+      doorRRPivot.position.set(0.88 + ex * 0.85, 1.52 + ex * 0.45, -0.20);
+      tailgatePivot.position.set(0.86, 1.52 + ex * 0.45, -2.26 - ex * 0.85);
+      engineGroup.position.set(0, ex * 0.95, ex * 0.45);
+      interiorGroup.position.y = ex * 0.22;
+      chassisGroup.position.y = -ex * 0.18;
+
+      if (engineFanMesh) {
+        engineFanMesh.rotation.z += dt * (state.driveOnRocks ? 18 : 5);
+      }
+      for (let i = 0; i < animatedPistons.length; i++) {
+        const p = animatedPistons[i];
+        p.mesh.position.y = 1.54 + Math.sin(elapsed * 24 + p.phase) * 0.045;
+      }
+
+      if (state.jumpOffset > 0 || state.jumpVelocity !== 0) {
+        state.jumpOffset += state.jumpVelocity * dt;
+        state.jumpVelocity -= 13.5 * dt;
+        if (state.jumpOffset <= 0) {
+          state.jumpOffset = 0;
+          state.chassisPhys.vy -= 1.85;
+          if (Math.abs(state.jumpVelocity) > 0.6) {
+            state.jumpVelocity = -state.jumpVelocity * 0.32;
+          } else {
+            state.jumpVelocity = 0;
+          }
+        }
+      }
+
+      // 1. Scroll Curved Trail, Boulders, Roadside Trees & Dust Spray
+      if (state.driveOnRocks) {
+        const moveDist = dt * 3.4 * state.crawlSpeed;
+        state.anim.terrainTime += dt * state.crawlSpeed;
+
+        // Scroll procedural trail texture UV offset smoothly!
+        procTextures.trailTex.offset.y -= moveDist * 0.14;
+
+        for (let i = 0; i < boulders.length; i++) {
+          const b = boulders[i];
+          b.z -= moveDist;
+          if (b.z < -14.0) b.z += trackSpanZ;
+          const roadX = getCurvedRoadX(b.z, state.anim.terrainTime);
+          b.mesh.position.x = roadX + b.trackLateralOffset;
+          b.mesh.position.z = b.z;
+          b.baseX = b.mesh.position.x;
+          b.mesh.scale.y = Math.max(0.05, b.baseScaleH * state.rockHeightScale);
+        }
+
+        for (let i = 0; i < roadsideProps.length; i++) {
+          const rp = roadsideProps[i];
+          rp.z -= moveDist;
+          if (rp.z < -35.0) rp.z += propsSpanZ;
+          const roadX = getCurvedRoadX(rp.z, state.anim.terrainTime);
+          rp.group.position.x = roadX + rp.baseOffset;
+          rp.group.position.z = rp.z;
+        }
+
+        gridHelper.position.z = -(state.anim.terrainTime * 3.4) % 1.33;
+
+        for (let i = 0; i < dustParticles.length; i++) {
+          const dp = dustParticles[i];
+          dp.mesh.visible = true;
+          dp.life += dt * 1.9 * state.crawlSpeed;
+          if (dp.life >= 1.0) {
+            dp.life = 0;
+            const wn = wheelNodes[dp.wheelIdx];
+            const cosH = Math.cos(cruiserRoot.rotation.y);
+            const sinH = Math.sin(cruiserRoot.rotation.y);
+            const lx = wn.x + (Math.random() - 0.5) * 0.24;
+            const lz = wn.z - 0.36;
+            dp.mesh.position.set(
+              lx * cosH + lz * sinH,
+              0.12 + wn.currentLift * 0.6,
+              -lx * sinH + lz * cosH
+            );
+          } else {
+            dp.mesh.position.z -= dp.speedZ * dt * state.crawlSpeed;
+            dp.mesh.position.y += dp.speedY * dt;
+            dp.mesh.position.x += dp.driftX * dt;
+            dp.mesh.scale.setScalar(Math.max(0.05, (1.0 - dp.life) * 1.35));
+          }
+        }
+      } else {
+        for (let i = 0; i < dustParticles.length; i++) {
+          dustParticles[i].mesh.visible = false;
+        }
+      }
+
+      // Update 3D curved road mesh ribbon geometry:
+      updateCurvedTrail(state.anim.terrainTime);
+
+      // Dynamic Winding Road Curves: Calculate smooth lookahead steering for front wheels
+      const xAhead = getCurvedRoadX(6.5, state.anim.terrainTime);
+      const steerAngle = Math.atan2(xAhead, 6.5);
+      const autoSteerDeg = state.driveOnRocks ? Math.max(-16, Math.min(16, (steerAngle * 180 / Math.PI) * 1.05)) : 0;
+
+      // Keep vehicle body stable, calm and centered (no over-moving or aggressive left-right yawing)
+      cruiserRoot.rotation.y = 0;
+
+      // Total steering angle for front wheels:
+      const totalSteerDeg = Math.max(-32, Math.min(32, state.steerAngleDeg + autoSteerDeg));
+      const baseSteerRad = (totalSteerDeg * Math.PI) / 180;
+
+      // Update Live HUD Steering Telemetry Readout
+      const steerReadoutEl = document.getElementById('steerAngleVal');
+      if (steerReadoutEl) {
+        const rounded = Math.round(totalSteerDeg);
+        steerReadoutEl.textContent = `${rounded > 0 ? '+' : ''}${rounded}° ${rounded > 2 ? '► RIGHT' : (rounded < -2 ? '◄ LEFT' : '• CTR')}`;
+      }
+
+      // 2. Per-Wheel Rock-Crawling Spring-Damper Physics
+      for (let i = 0; i < wheelNodes.length; i++) {
+        const w = wheelNodes[i];
+        const targetLift = sampleRockHeightAt(w.x, w.z);
+        const springRate = targetLift > w.currentLift ? 58 : 30;
+        const accel = (targetLift - w.currentLift) * springRate - w.velLift * 9.2;
+        w.velLift += accel * dt;
+        w.currentLift = Math.max(0, w.currentLift + w.velLift * dt);
+
+        const outX = w.x + (w.x > 0 ? ex * 0.65 : -ex * 0.65);
+        w.wheelPivot.position.set(outX, 0.50 + w.currentLift, w.z);
+
+        if (w.isFront) {
+          // Smooth Ackermann tire steering
+          const isRightWheel = w.x > 0;
+          const ackermannFactor = (totalSteerDeg > 0 && isRightWheel) || (totalSteerDeg < 0 && !isRightWheel)
+            ? 1.05
+            : 0.95;
+          w.wheelPivot.rotation.y = baseSteerRad * ackermannFactor;
+        }
+        if (state.driveOnRocks) {
+          w.wheelMesh.rotation.x += dt * 6.5 * state.crawlSpeed;
+        }
+
+        const pct = Math.min(100, Math.max(15, Math.round(24 + (w.currentLift / 0.36) * 76)));
+        if (w.barEl) w.barEl.style.height = `${pct}%`;
+      }
+
+      const fl = wheelNodes[0].currentLift;
+      const fr = wheelNodes[1].currentLift;
+      const rl = wheelNodes[2].currentLift;
+      const rr = wheelNodes[3].currentLift;
+
+      frontAxleGroup.position.y = 0.50 + (fl + fr) * 0.5;
+      frontAxleGroup.rotation.z = Math.atan2(fr - fl, 2.08);
+
+      rearAxleGroup.position.y = 0.50 + (rl + rr) * 0.5;
+      rearAxleGroup.rotation.z = Math.atan2(rr - rl, 2.08);
+
+      // 3. Second-Order Spring-Damper Physics for Chassis Body + Instant Lift Kit Offset
+      const avgLift = (fl + fr + rl + rr) * 0.25;
+      const goalY = state.liftKitOffset + avgLift * 0.66 + state.jumpOffset;
+      const goalPitch = -Math.atan2(((fl + fr) * 0.5) - ((rl + rr) * 0.5), 2.98) * 0.88;
+      const goalRoll = Math.atan2(((fr + rr) * 0.5) - ((fl + rl) * 0.5), 2.08) * 0.85;
+
+      const cp = state.chassisPhys;
+      cp.vy += ((goalY - cp.y) * 42 - cp.vy * 6.0) * dt;
+      cp.y += cp.vy * dt;
+
+      cp.vPitch += ((goalPitch - cp.pitch) * 44 - cp.vPitch * 5.6) * dt;
+      cp.pitch += cp.vPitch * dt;
+
+      cp.vRoll += ((goalRoll - cp.roll) * 42 - cp.vRoll * 5.4) * dt;
+      cp.roll += cp.vRoll * dt;
+
+      sprungMassGroup.position.y = cp.y;
+      sprungMassGroup.rotation.x = cp.pitch;
+      sprungMassGroup.rotation.z = cp.roll;
+      sprungMassGroup.position.x = 0;
+
+      // 4. Compress & Stretch 3D Fox Helical Coilovers & Pivot 4-Link Control Arms!
+      for (let i = 0; i < wheelNodes.length; i++) {
+        const w = wheelNodes[i];
+        const cornerChassisY = 0.98 + sprungMassGroup.position.y
+          + (w.z > 0 ? -Math.sin(sprungMassGroup.rotation.x) * 1.5 : Math.sin(sprungMassGroup.rotation.x) * 1.5)
+          + (w.x > 0 ? Math.sin(sprungMassGroup.rotation.z) * 0.74 : -Math.sin(sprungMassGroup.rotation.z) * 0.74);
+
+        const axleCornerY = 0.50 + w.currentLift;
+        const springSpan = Math.max(0.14, cornerChassisY - axleCornerY);
+
+        w.coilMesh.position.y = axleCornerY;
+        w.coilMesh.scale.y = springSpan / 0.52;
+
+        w.shockPiston.position.y = axleCornerY + springSpan * 0.45;
+        w.shockBody.position.y = cornerChassisY - 0.12;
+        w.reservoir.position.y = cornerChassisY - 0.10;
+
+        w.linkArm.position.y = (axleCornerY + cornerChassisY) * 0.5 - 0.06;
+        w.linkArm.rotation.x = Math.PI / 2 + (w.z > 0 ? 1 : -1) * ((cornerChassisY - axleCornerY - 0.48) * 0.45);
+
+        w.leafPack.position.y = axleCornerY + 0.08;
+        w.leafPack.scale.y = Math.max(0.55, 1.18 - w.currentLift * 1.35);
+      }
+
+      const pitchDeg = (-sprungMassGroup.rotation.x * 180 / Math.PI).toFixed(1);
+      const rollDeg = (sprungMassGroup.rotation.z * 180 / Math.PI).toFixed(1);
+      pitchRollReadoutEl.textContent = `PITCH: ${pitchDeg}° | ROLL: ${rollDeg}°`;
+      speedReadoutEl.textContent = state.driveOnRocks
+        ? Math.round(38 * state.crawlSpeed + avgLift * 28)
+        : 0;
+
+      updateOscilloscope(fl, fr, rl, rr);
+      updateAeroStreamlines(elapsed);
+
+      if (state.audioEnabled && engineOsc && audioCtx) {
+        engineOsc.frequency.setTargetAtTime(48 + avgLift * 85 + state.crawlSpeed * 12 + state.jumpOffset * 35, audioCtx.currentTime, 0.08);
+      }
+
+      if (state.rotateModel && !camRig.isDragging) {
+        camRig.goalTheta += dt * 0.38;
+      }
+      camRig.theta += (camRig.goalTheta - camRig.theta) * Math.min(1, dt * 8);
+      camRig.phi += (camRig.goalPhi - camRig.phi) * Math.min(1, dt * 8);
+      camRig.radius += (camRig.goalRadius - camRig.radius) * Math.min(1, dt * 8);
+      camRig.target.lerp(camRig.goalTarget, Math.min(1, dt * 8));
+
+      camera.position.x = camRig.target.x + camRig.radius * Math.sin(camRig.phi) * Math.sin(camRig.theta);
+      camera.position.y = camRig.target.y + camRig.radius * Math.cos(camRig.phi);
+      camera.position.z = camRig.target.z + camRig.radius * Math.sin(camRig.phi) * Math.cos(camRig.theta);
+      camera.lookAt(camRig.target);
+
+      renderer.render(scene, camera);
+      updateCalloutsOverlay();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.onload = () => {
+      buildColorPaletteUI();
+      renderMaterialThumbnails();
+      applyBiomeEnvironment('munnar');
+      updateCurvedTrail(0);
+      animate();
+    };
+  </script>
+</body>
+</html>
